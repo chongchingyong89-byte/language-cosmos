@@ -62,19 +62,20 @@ const coreFragment = /* glsl */`
   }`;
 
 export class Cosmos {
-  constructor(container, { languages, features, bridges, agency }) {
+  constructor(container, { languages, features, bridges, agency, shadows }) {
     this.container = container;
     this.languages = languages;
     this.features = features;
     this.bridgesData = bridges;
     this.agency = agency;
+    this.shadows = shadows;
     this.byId = new Map(languages.map((l) => [l.id, l]));
     this.nodes = new Map();       // langId → { group, core, halo, label, tree, leaves, trunks, radius }
     this.bridges = [];
     this.handlers = { hover: () => {}, select: () => {} };
     this.state = {
       focus: null, sizeMode: 'lexicon', showAllTrees: true, showBridges: true,
-      categories: new Set(Object.keys(CATEGORIES)), minEvidence: 0,
+      categories: new Set(Object.keys(CATEGORIES)), minEvidence: 0, showShadow: true,
     };
     this.clock = new THREE.Clock();
     this.tween = null;
@@ -322,13 +323,13 @@ export class Cosmos {
     const items = [];
     for (const fid of lang.features) {
       const f = this.features[fid];
-      if (f) items.push({ ...f, id: fid, type: 'feature', example: f.ex?.[lang.id] });
+      if (f) items.push({ ...f, id: fid, type: 'feature', example: f.ex?.[lang.id], shadow: this.shadows.features[fid] });
     }
-    if (lang.agentive) items.push({ ...this.agency.agentive, id: 'agentive', type: 'feature' });
-    if (lang.nonagentive) items.push({ ...this.agency.nonagentive, id: 'nonagentive', type: 'feature' });
+    if (lang.agentive) items.push({ ...this.agency.agentive, id: 'agentive', type: 'feature', shadow: this.shadows.features.agentive });
+    if (lang.nonagentive) items.push({ ...this.agency.nonagentive, id: 'nonagentive', type: 'feature', shadow: this.shadows.features.nonagentive });
     for (const c of lang.concepts ?? []) {
       items.push({
-        id: `concept:${c.term}`, type: 'concept', title: c.term, category: c.category,
+        id: `concept:${c.term}`, type: 'concept', title: c.term, category: c.category, shadow: this.shadows.concepts[c.term],
         evidence: c.evidence ?? 'speculative', claim: c.gloss, refs: c.ref ? [c.ref] : [],
         mechanism: 'A culture-key word: having a word may make a concept easier to notice, remember and talk about. A word is not the same as a feeling or a value, so treat this as a prompt for study.',
         study: 'Free-listing and scenario-rating tasks: do speakers recognise and use this concept more, and faster, than translation-equivalent groups?',
@@ -426,7 +427,21 @@ export class Cosmos {
         label.position.copy(leafPos).add(new THREE.Vector3(0, size + 0.35, 0));
         node.tree.add(label);
 
-        node.leaves.push({ item, mesh: leaf, twig, label, category: cat, ev });
+        // Red thorn pointing outward = this leaf has a shadow side.
+        let thorn = null;
+        if (item.shadow?.length) {
+          const out = leafPos.clone().sub(hub).normalize();
+          thorn = new THREE.Mesh(
+            new THREE.ConeGeometry(0.15 + 0.04 * item.shadow.length, 0.95, 6),
+            new THREE.MeshBasicMaterial({ color: '#ff3b5c', transparent: true }),
+          );
+          thorn.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), out);
+          thorn.position.copy(leafPos).add(out.multiplyScalar(size + 0.55));
+          thorn.userData = leaf.userData;
+          node.tree.add(thorn);
+        }
+
+        node.leaves.push({ item, mesh: leaf, twig, label, category: cat, ev, thorn });
       });
     }
   }
@@ -617,6 +632,10 @@ export class Cosmos {
         l.mesh.material.opacity = treeOpacity * (l.item.evidence === 'contested' ? 0.75 : 1);
         l.twig.material.opacity = treeOpacity * 0.7;
         l.label.visible = ok && isFocus;
+        if (l.thorn) {
+          l.thorn.visible = l.mesh.visible && this.state.showShadow;
+          l.thorn.material.opacity = treeOpacity;
+        }
       }
       for (const t of n.trunks) {
         t.mesh.visible = t.hub.visible = shownCats.has(t.category) && n.tree.visible;

@@ -159,6 +159,19 @@ textarea#notes {
 }
 .controls button:hover { background: rgba(255,210,122,0.2); }
 
+/* ── Shadow side ── */
+.thorn { color: #ff5c78; font-size: 10px; margin-left: 4px; }
+.shadow-sec { margin-top: 18px; border: 1px solid rgba(255, 70, 100, 0.28); border-radius: 12px; padding: 4px 12px 10px; background: rgba(255, 40, 80, 0.05); }
+.shadow-sec h3 { color: #ff7a90 !important; }
+.shadow-sec .small { font-size: 12px; }
+.shadow-row { display: block; width: 100%; text-align: left; background: rgba(0,0,0,0.18); border: 1px solid transparent; border-radius: 9px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer; }
+.shadow-row:hover { border-color: rgba(255, 70, 100, 0.35); }
+.shadow-row b { display: block; margin-bottom: 2px; }
+.shadow-item p { margin: 0 0 6px !important; }
+.shadow-item .refs { margin-bottom: 6px; }
+.shadow-tog { color: #ff8a9c; }
+.controls .shadow-tog input { accent-color: #ff5c78; }
+
 /* ── 3D labels ── */
 .core-label {
   display: flex; flex-direction: column; align-items: center; pointer-events: auto; cursor: pointer;

@@ -44,7 +44,26 @@ Each step weakens the effect. Perception effects (Russian blues) are well establ
 - **Subtractive numerals**: do Yoruba numerals change mental-arithmetic strategy?
 - **Culture-key words**: does knowing *malu*, *budi*, *面子* or *정* change how quickly people recognise those situations in vignettes?
 
-## 5. Roadmap for the app
+## 5. The shadow side (negative impacts)
+
+Every feature that can help can also hurt. The red thorns in the app collect the downsides that have been documented or proposed, graded on the same evidence scale ([src/data/shadows.js](../src/data/shadows.js)).
+
+**Best-supported downsides:**
+- **Machine translation bias from genderless pronouns** (strong): Turkish/Finnish/Malay "o/hän/dia" becomes "he is a doctor" and "she is a nurse".
+- **Masculine generics** (moderate): "der Arzt" for any doctor lowers girls' confidence for male-typed jobs; pair forms fix it.
+- **Agentive vs non-agentive accident language** (moderate): one inflates blame, the other blurs accountability.
+- **Diglossia** (moderate): reading in a variety nobody speaks at home slows early literacy.
+- **Inverted numerals** (moderate): extra working-memory load and number-writing errors in children.
+
+**Mostly correlational or speculative:** future tense and saving, grammatical gender and women's employment, honorifics and safety culture (the "Korean Air" story is disputed), pronoun drop and conformity, and the shadows of culture-key words (面子, 空気を読む, malu, kreng jai, jugaad, avos').
+
+**Ethics for this part of the study**
+1. Attach harms to *features*, never to *peoples*. "Honorific grammar may suppress dissent" is a testable hypothesis; "Koreans don't speak up" is a stereotype.
+2. Ask the reverse question too: the same feature usually has an upside (honorifics also signal respect and care).
+3. Count with care: more thorns means more research, not a worse language.
+4. Look for natural experiments: language reforms such as Swedish *hen*, flattened Korean job titles and German pair forms let you watch an effect change.
+
+## 6. Roadmap for the app
 
 - [ ] **Compare mode**: pick 2–3 cores and show their shared and unique leaves side by side.
 - [ ] **WALS import**: generate features automatically from the World Atlas of Language Structures (wals.info) for 2,600 languages.
@@ -55,7 +74,7 @@ Each step weakens the effect. Perception effects (Russian blues) are well establ
 - [ ] **Shared notes**: move study notes from browser storage to a shared database so a research group can annotate together.
 - [ ] **Verify lexicon figures**: anything marked `verify: true`.
 
-## 6. Pitfalls to remember
+## 7. Pitfalls to remember
 
 - **"Eskimo words for snow"**: counting words does not measure how people think. The way the words are *used* matters more.
 - **Confounds**: language, religion, climate, economics and colonial history all travel together.

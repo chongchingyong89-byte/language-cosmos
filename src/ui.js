@@ -25,9 +25,18 @@ const badge = (evId) => {
   return `<span class="badge" style="--c:${ev.color}" title="${esc(ev.desc)}">${ev.label}</span>`;
 };
 
+const shadowList = (list) => list.map((s) => `
+  <div class="shadow-item">
+    <p>${esc(s.claim)} ${badge(s.evidence)}</p>
+    ${s.refs?.length ? `<ul class="refs">${s.refs.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}
+  </div>`).join('');
+
+const SHADOW_NOTE = 'A downside linked to a feature or a word, not a verdict on its speakers. Culture, history and economics usually matter more than grammar.';
+
 export class UI {
-  constructor(cosmos, { languages, features, bridges }, sound) {
+  constructor(cosmos, { languages, features, bridges, shadows }, sound) {
     this.cosmos = cosmos;
+    this.shadows = shadows;
     this.sound = sound;
     const lex = languages.map((l) => l.lexicon.n);
     sound.setLexiconRange(Math.min(...lex), Math.max(...lex));
@@ -278,6 +287,7 @@ export class UI {
     $('#size-mode').addEventListener('change', (e) => { this.sound.sweep(); this.cosmos.setSizeMode(e.target.value); });
     $('#toggle-trees').addEventListener('change', (e) => { this.sound.toggle(e.target.checked, 1); this.cosmos.set({ showAllTrees: e.target.checked }); });
     $('#toggle-bridges').addEventListener('change', (e) => { this.sound.toggle(e.target.checked, 3); this.cosmos.set({ showBridges: e.target.checked }); });
+    $('#toggle-shadow').addEventListener('change', (e) => { this.sound.toggle(e.target.checked, 2); this.cosmos.set({ showShadow: e.target.checked }); });
     $('#toggle-rotate').addEventListener('change', (e) => { this.sound.toggle(e.target.checked, 4); this.cosmos.setAutoRotate(e.target.checked); });
     $('#sort').addEventListener('change', () => this.sound.click());
     $('#btn-overview').addEventListener('click', () => this.home());
@@ -370,6 +380,7 @@ export class UI {
       <p>Every core grows <b>branches</b> in eight fixed directions, one per trait domain. The leaves are linguistic features (●) or culture-key words (◆) with a claimed effect on how speakers think, feel or act.</p>
       <ul class="howto">
         <li><b>Leaf size</b> shows strength of evidence. A <b>wireframe</b> leaf is speculative.</li>
+        <li><b>Red thorns</b> mark the <b>shadow side</b>: a documented or hypothesised <em>negative</em> effect, graded on the same evidence scale. Toggle them under Filters.</li>
         <li><b>Gold arcs</b> between cores are <b>bilingual studies</b>, where the <em>same person</em> shifts when switching language. This is the cleanest evidence that language and personality are linked.</li>
         <li class="only-mouse">Click a core or leaf, or a name on the left. Press <kbd>Esc</kbd> to return to the overview, <kbd>/</kbd> to search and <kbd>M</kbd> to mute. Shift-click a domain to show only that one.</li>
         <li class="only-touch">Use the search button to find a language and the sliders button for filters. Drag this sheet up for details, or down to see more of the sky.</li>
@@ -409,7 +420,7 @@ export class UI {
           <h3><i></i>${CATEGORIES[c].label} <small>${CATEGORIES[c].zh}</small></h3>
           ${arr.map((it) => `
             <button class="leaf-row" data-item="${esc(it.id)}">
-              <span class="t">${it.type === 'concept' ? '◆' : '●'} ${esc(it.title)}</span>${badge(it.evidence)}
+              <span class="t">${it.type === 'concept' ? '◆' : '●'} ${esc(it.title)}${it.shadow ? ' <span class="thorn" title="Has a shadow side">▲</span>' : ''}</span>${badge(it.evidence)}
               ${it.example ? `<span class="ex">${esc(it.example)}</span>` : ''}
             </button>`).join('')}
         </section>`).join('')}
@@ -417,11 +428,20 @@ export class UI {
         <button class="bridge-row" data-bridge="${this.bridges.indexOf(b)}">
           ⇄ ${esc(this.byId.get(b.a === id ? b.b : b.a).name)}: ${esc(b.title)} ${badge(b.evidence)}
         </button>`).join('')}` : ''}
+      ${(() => {
+        const dark = items.filter((it) => it.shadow);
+        if (!dark.length) return '';
+        return `<section class="shadow-sec">
+          <h3>▲ Shadow side: possible negative impacts (${dark.reduce((n, it) => n + it.shadow.length, 0)})</h3>
+          <p class="muted small">${SHADOW_NOTE} More thorns means more studied features, not a "worse" language.</p>
+          ${dark.map((it) => `<button class="shadow-row" data-item="${esc(it.id)}"><b>${esc(it.title)}</b>${shadowList(it.shadow)}</button>`).join('')}
+        </section>`;
+      })()}
       <h3>My study notes</h3>
       <textarea id="notes" placeholder="Hypotheses, observations from speakers you know, papers to read… (saved in this browser)">${esc(this.notes[id] ?? '')}</textarea>
     `);
 
-    for (const btn of document.querySelectorAll('.leaf-row')) {
+    for (const btn of document.querySelectorAll('.leaf-row, .shadow-row')) {
       btn.addEventListener('click', () => {
         const item = items.find((i) => i.id === btn.dataset.item);
         this.select({ kind: 'leaf', langId: id, item });
@@ -454,6 +474,7 @@ export class UI {
       ${item.mechanism ? `<h3>Mechanism</h3><p>${esc(item.mechanism)}</p>` : ''}
       ${item.refs?.length ? `<h3>Sources</h3><ul class="refs">${item.refs.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}
       ${item.study ? `<h3>How to test it</h3><p class="study">${esc(item.study)}</p>` : ''}
+      ${item.shadow ? `<section class="shadow-sec"><h3>▲ Shadow side</h3><p class="muted small">${SHADOW_NOTE}</p>${shadowList(item.shadow)}</section>` : ''}
       ${shared.length ? `<h3>Also found in</h3><div class="chips">${shared.map((x) => `
         <button class="chip on" data-lang="${x.id}" style="--c:${FAMILIES[x.family]?.color}"><i></i>${esc(x.name)}${item.ex?.[x.id] ? ` <small>${esc(item.ex[x.id])}</small>` : ''}</button>`).join('')}</div>` : ''}
     `);
@@ -471,6 +492,7 @@ export class UI {
       </div>
       <p>${esc(b.claim)}</p>
       <h3>Sources</h3><ul class="refs">${b.refs.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
+      ${this.shadows.bridges[b.title] ? `<section class="shadow-sec"><h3>▲ Shadow side</h3>${shadowList(this.shadows.bridges[b.title])}</section>` : ''}
       <p class="muted">Why bridges matter: the same people are compared with themselves, so culture, upbringing and genes are held constant, and the language of testing is the only thing that changes.</p>
       <div class="chips">
         <button class="chip on" data-lang="${A.id}" style="--c:${FAMILIES[A.family]?.color}"><i></i>${esc(A.name)}</button>
