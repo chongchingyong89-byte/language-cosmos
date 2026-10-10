@@ -33,16 +33,16 @@ export class SoundScape {
     this.lastTick = 0;
     this.lexRange = [1, 1];
 
-    // Browsers only allow audio after a user gesture.
-    const unlock = () => {
-      if (this.enabled) this.#start();
-      if (this.ctx) {
-        window.removeEventListener('pointerdown', unlock);
-        window.removeEventListener('keydown', unlock);
-      }
+    // Browsers only start audio inside a real user gesture. On touch screens
+    // that is the finger lifting (pointerup / touchend / click), not
+    // pointerdown. Keep listening until audio is running: it can also need
+    // waking again after the tab has been in the background.
+    const wake = () => {
+      if (this.enabled && this.ctx?.state !== 'running') this.#start();
     };
-    window.addEventListener('pointerdown', unlock);
-    window.addEventListener('keydown', unlock);
+    for (const ev of ['pointerup', 'touchend', 'click', 'keydown']) {
+      window.addEventListener(ev, wake, { passive: true });
+    }
     document.addEventListener('visibilitychange', () => {
       if (!this.ctx || !this.enabled) return;
       if (document.hidden) this.ctx.suspend(); else this.ctx.resume();
@@ -201,6 +201,11 @@ export class SoundScape {
 
   #start() {
     if (!this.ctx) this.#build();
+    // iOS Safari only unlocks output once a sound is started inside the gesture.
+    const silent = this.ctx.createBufferSource();
+    silent.buffer = this.ctx.createBuffer(1, 1, 22050);
+    silent.connect(this.ctx.destination);
+    silent.start();
     this.ctx.resume();
     const t = this.ctx.currentTime;
     this.master.gain.cancelScheduledValues(t);
