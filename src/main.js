@@ -4,6 +4,8 @@ import { SoundScape } from './audio.js';
 import { LANGUAGES, AGENCY } from './data/languages.js';
 import { FEATURES, BRIDGES } from './data/features.js';
 import { FEATURE_SHADOWS, CONCEPT_SHADOWS, BRIDGE_SHADOWS } from './data/shadows.js';
+import { FEATURE_TRAITS, CONCEPT_TRAITS, BRIDGE_SHIFTS } from './data/traits.js';
+import { TIMELINE, FEATURE_STAGE } from './data/development.js';
 
 // Catch data typos early: unknown feature ids or bridge endpoints.
 const ids = new Set(LANGUAGES.map((l) => l.id));
@@ -16,10 +18,16 @@ for (const b of BRIDGES) {
 const terms = new Set(LANGUAGES.flatMap((l) => l.concepts.map((c) => c.term)));
 for (const k of Object.keys(FEATURE_SHADOWS)) if (!FEATURES[k] && !AGENCY[k]) console.warn(`[cosmos] shadow for unknown feature "${k}"`);
 for (const k of Object.keys(CONCEPT_SHADOWS)) if (!terms.has(k)) console.warn(`[cosmos] shadow for unknown concept "${k}"`);
+for (const k of Object.keys(FEATURE_TRAITS)) if (!FEATURES[k] && !AGENCY[k]) console.warn(`[cosmos] traits for unknown feature "${k}"`);
+for (const k of Object.keys(CONCEPT_TRAITS)) if (!terms.has(k)) console.warn(`[cosmos] traits for unknown concept "${k}"`);
 for (const k of Object.keys(BRIDGE_SHADOWS)) if (!BRIDGES.some((b) => b.title === k)) console.warn(`[cosmos] shadow for unknown bridge "${k}"`);
 
 const shadows = { features: FEATURE_SHADOWS, concepts: CONCEPT_SHADOWS, bridges: BRIDGE_SHADOWS };
-const data = { languages: LANGUAGES, features: FEATURES, bridges: BRIDGES, agency: AGENCY, shadows };
+const traits = { features: FEATURE_TRAITS, concepts: CONCEPT_TRAITS };
+const data = {
+  languages: LANGUAGES, features: FEATURES, bridges: BRIDGES, agency: AGENCY, shadows, traits,
+  stageOf: FEATURE_STAGE, timeline: TIMELINE, shifts: BRIDGE_SHIFTS,
+};
 try {
   const cosmos = new Cosmos(document.getElementById('scene'), data);
   new UI(cosmos, data, new SoundScape());

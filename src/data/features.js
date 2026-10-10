@@ -323,7 +323,51 @@ export const FEATURES = {
     mechanism: 'Two distinct grammars are used in different social domains.',
     refs: ['Ferguson (1959). Diglossia. Word 15.'],
     study: 'Compare executive-function tasks across diglossic speakers, monolinguals and bilinguals.',
-    ex: { ar: 'Fuṣḥā (MSA) vs. ʿāmmiyya dialects', ta: 'செந்தமிழ் (literary) vs. கொடுந்தமிழ் (colloquial)' },
+    ex: { ar: 'Fuṣḥā (MSA) vs. ʿāmmiyya dialects', ta: 'செந்தமிழ் (literary) vs. கொடுந்தமிழ் (colloquial)', xml: 'BIM (natural Deaf language) vs. KTBM (signed Malay used in schools)' },
+  },
+
+  // ── Sign languages (modality: hands, face, space) ─────────────────────────
+  spatial_grammar: {
+    title: 'Grammar in space', category: 'perception', evidence: 'moderate',
+    claim: 'Native signers show better mental rotation and spatial imagery, the skills their grammar exercises all day.',
+    mechanism: 'Pronouns, verb agreement and "classifier" constructions are places and movements in the signing space.',
+    refs: [
+      'Emmorey, Kosslyn & Bellugi (1993). Visual imagery and visual-spatial language. Cognition 46.',
+      'Emmorey (2002). Language, Cognition, and the Brain: Insights from Sign Language Research.',
+    ],
+    study: 'Compare mental-rotation speed of deaf native signers, hearing native signers (CODAs) and non-signers. This separates the effect of language from the effect of deafness.',
+  },
+  facial_grammar: {
+    title: 'Grammar on the face', category: 'emotion', evidence: 'moderate',
+    claim: 'Facial expressions mark questions, conditionals and adverbs, so signers learn to tell grammatical faces from emotional ones and become sharper at local facial details.',
+    mechanism: 'The same muscles carry both syntax and feeling, and children acquire grammatical faces between 3 and 6.',
+    refs: [
+      'McCullough & Emmorey (1997). Face processing by deaf ASL signers. J. Deaf Studies & Deaf Education 2(4).',
+      'Reilly, McIntire & Bellugi (1990). The acquisition of conditionals in ASL: grammaticized facial expressions. Applied Psycholinguistics 11.',
+    ],
+    study: 'Measure emotion-recognition accuracy and speed in native signers and non-signers using faces that carry grammatical markers.',
+  },
+  iconicity: {
+    title: 'Iconic signs', category: 'creativity', evidence: 'moderate',
+    claim: 'Many signs look like what they mean, which speeds word recognition and early vocabulary learning. It may also make visual metaphor feel natural, though that part is speculative.',
+    mechanism: 'Form and meaning overlap (e.g. TREE shows a trunk and branches).',
+    refs: [
+      'Thompson, Vinson & Vigliocco (2009). The link between form and meaning in ASL. J. Exp. Psych.: LMC 35(2).',
+      'Thompson et al. (2012). The road to language learning is iconic. Psychological Science 23(12).',
+    ],
+    study: 'Give a divergent-thinking task and a visual-metaphor task to native signers and matched non-signers.',
+  },
+  late_access: {
+    title: 'Risk of a late first language', category: 'self', evidence: 'strong',
+    claim: 'About 90–95% of deaf children are born to hearing parents. Without early signing they may have no full first language for years, which delays theory of mind and in severe cases causes lifelong language deprivation.',
+    mechanism: 'The sign language is a complete language; the harm comes from being exposed to it late. That makes it the clearest proof that the timing of a first language shapes social cognition and personality.',
+    refs: [
+      'Mitchell & Karchmer (2004). Chasing the mythical ten percent. Sign Language Studies 4(2).',
+      'Schick et al. (2007). Child Development 78(2).',
+      'Mayberry, Lock & Kazmi (2002). Nature 417.',
+      'Hall (2017). What you don\'t know can hurt you: language deprivation. Maternal & Child Health Journal 21(5).',
+    ],
+    study: 'Compare deaf native signers (deaf parents) with late signers on empathy, perspective-taking and Big Five self-reports.',
   },
 
   // ── Self & identity ───────────────────────────────────────────────────────
@@ -424,6 +468,12 @@ export const BRIDGES = [
     title: 'Different sentence completions',
     claim: 'Japanese–English bilingual women completed the same sentence stems with more family-duty themes in Japanese and more individual themes in English.',
     refs: ['Ervin-Tripp (1964). An analysis of the interaction of language, topic, and listener. American Anthropologist 66(6).'],
+  },
+  {
+    a: 'zh', b: 'en', category: 'self', evidence: 'moderate',
+    title: 'The bicultural self',
+    claim: 'Chinese-born students in Canada described themselves with more collective, relational statements and endorsed more Chinese values when they wrote in Chinese than in English.',
+    refs: ['Ross, Xun & Wilson (2002). Language and the bicultural self. PSPB 28(8).'],
   },
   {
     a: 'en', b: 'ko', category: 'decision', evidence: 'moderate',

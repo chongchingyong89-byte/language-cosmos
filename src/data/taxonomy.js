@@ -62,6 +62,8 @@ export const FAMILIES = {
   'austroasiatic':  { label: 'Austroasiatic',  color: '#8cf08c' },
   'pama-nyungan':   { label: 'Pama–Nyungan',   color: '#ff7070' },
   'mura':           { label: 'Mura',           color: '#c0ff7a' },
+  // Not a genetic family: grouped because modality (hands, face, space) is the shared trait.
+  'sign':           { label: 'Sign languages', color: '#eef2ff' },
 };
 
 // Galaxy placement order: related clusters sit next to each other on the arms.
@@ -70,5 +72,28 @@ export const CLUSTER_ORDER = [
   'germanic', 'romance', 'hellenic', 'slavic', 'indo-aryan', 'dravidian',
   'afro-asiatic', 'turkic', 'uralic', 'niger-congo',
   'sino-tibetan', 'koreanic', 'japonic', 'kra-dai', 'austroasiatic', 'austronesian',
-  'pama-nyungan', 'mura',
+  'pama-nyungan', 'mura', 'sign',
 ];
+
+// Personality axes for the radar and the lens: Big Five plus three value
+// dimensions that map onto the user's core interests (attitude, conservatism).
+export const TRAITS = {
+  openness:          { label: 'Openness',          short: 'Open',     zh: '开放性',   desc: 'Curiosity, imagination, creativity.' },
+  conscientiousness: { label: 'Conscientiousness', short: 'Consc',    zh: '尽责性',   desc: 'Self-control, planning, future orientation.' },
+  extraversion:      { label: 'Extraversion',      short: 'Extra',    zh: '外向性',   desc: 'Sociability, assertiveness, expressiveness.' },
+  agreeableness:     { label: 'Agreeableness',     short: 'Agree',    zh: '宜人性',   desc: 'Warmth, harmony, avoiding conflict.' },
+  neuroticism:       { label: 'Emotional sensitivity', short: 'Emot', zh: '情绪性',   desc: 'Big Five neuroticism: proneness to sadness, worry, longing.' },
+  interdependence:   { label: 'Interdependence',   short: 'Interdep', zh: '互依自我', desc: 'Self defined through relationships and the group (collectivism).' },
+  hierarchy:         { label: 'Hierarchy acceptance', short: 'Hier',  zh: '等级观',   desc: 'Respect for rank and seniority (power distance).' },
+  conservatism:      { label: 'Conservatism',      short: 'Cons',     zh: '保守性',   desc: 'Tradition, caution, conformity to norms.' },
+};
+
+// When in life a language effect first shows up.
+export const STAGES = {
+  womb:    { label: 'Before birth',          zh: '出生前', age: 'last trimester' },
+  infancy: { label: 'Infancy',               zh: '婴儿期', age: '0–1 yr' },
+  toddler: { label: 'Toddler',               zh: '幼儿期', age: '1–3 yrs' },
+  early:   { label: 'Early childhood',       zh: '学前期', age: '3–6 yrs' },
+  school:  { label: 'School age',            zh: '学龄期', age: '6–12 yrs' },
+  adult:   { label: 'Adolescence & adulthood', zh: '成年', age: '12+ yrs' },
+};

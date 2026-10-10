@@ -159,6 +159,69 @@ textarea#notes {
 }
 .controls button:hover { background: rgba(255,210,122,0.2); }
 
+/* ── Personality radar & lens ── */
+.persona { margin-top: 16px; }
+.persona h3 small, .tl-stage h3 small { color: var(--muted); letter-spacing: 0; text-transform: none; font-weight: 400; }
+.radar { width: 100%; max-width: 330px; display: block; margin: 0 auto; }
+.radar .grid polygon, .radar .grid line { fill: none; stroke: rgba(160, 180, 255, 0.14); stroke-width: 1; }
+.radar .neutral { fill: none; stroke: rgba(255, 255, 255, 0.45); stroke-dasharray: 3 3; }
+.radar .shape { fill: color-mix(in srgb, var(--c) 28%, transparent); stroke: var(--c); stroke-width: 1.6; filter: drop-shadow(0 0 6px var(--c)); }
+.radar text { fill: var(--muted); font-size: 10.5px; text-anchor: middle; dominant-baseline: middle; font-family: var(--font); }
+.radar text.up { fill: var(--accent); font-weight: 600; }
+.radar text.down { fill: #8fa4ff; font-weight: 600; }
+.small { font-size: 12px; }
+.traits { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.trait-row { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 2px 10px; align-items: center; }
+.trait-row .tn { font-size: 13px; }
+.trait-row .tn small { color: var(--muted); }
+.trait-row .from { grid-column: span 2; font-size: 11.5px; color: var(--muted); }
+.tilt { position: relative; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.07); }
+.tilt::before { content: ''; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: rgba(255,255,255,0.35); }
+.tilt i { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+.tilt i.up { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.tilt i.down { background: #6f8cff; box-shadow: 0 0 6px #6f8cff; }
+.up { color: var(--accent); }
+.down { color: #8fa4ff; }
+.measured { margin-top: 10px; padding: 8px 12px; border-radius: 10px; font-size: 13px; background: rgba(94, 240, 160, 0.06); border: 1px solid rgba(94, 240, 160, 0.25); }
+.meta-row { display: flex; flex-wrap: wrap; gap: 6px; margin: -2px 0 12px; }
+.meta { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); }
+.meta.trait.up { border-color: rgba(255, 210, 122, 0.4); }
+.meta.trait.down { border-color: rgba(111, 140, 255, 0.45); }
+#lens-key {
+  position: fixed; z-index: 13; top: 18px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 12px; align-items: center; padding: 7px 14px; font-size: 12.5px; cursor: pointer; border-radius: 999px;
+}
+#lens-key[hidden] { display: none; }
+#lens-key .x { color: var(--muted); }
+.core-label .lens { font-size: 11px; font-weight: 600; color: var(--muted); }
+.core-label .lens[data-dir="up"] { color: var(--accent); }
+.core-label .lens[data-dir="down"] { color: #8fa4ff; }
+body:not(.lens-on) .core-label .lens { display: none; }
+
+/* ── Mother tongue origin & timeline ── */
+.origin-label {
+  display: flex; flex-direction: column; align-items: center; pointer-events: auto; cursor: pointer; user-select: none;
+  text-shadow: 0 0 10px #000, 0 0 3px #000;
+}
+.origin-label .zh { font-size: 15px; font-weight: 700; color: #ffd9a8; letter-spacing: 0.2em; }
+.origin-label .en { font-size: 10.5px; color: #e9d6bd; letter-spacing: 0.06em; }
+.start-btn {
+  display: block; width: 100%; text-align: left; margin: 6px 0 4px; padding: 10px 12px; border-radius: 12px; cursor: pointer;
+  background: linear-gradient(90deg, rgba(255, 217, 168, 0.16), rgba(255, 217, 168, 0.04)); border: 1px solid rgba(255, 217, 168, 0.4); color: #ffe7c6;
+}
+.start-btn:hover { background: rgba(255, 217, 168, 0.2); }
+.lessons { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 6px; font-size: 13px; }
+.lessons div { background: rgba(255,255,255,0.04); border-radius: 10px; padding: 8px 10px; }
+.timeline { position: relative; margin-top: 8px; padding-left: 16px; border-left: 1px solid rgba(255, 217, 168, 0.3); }
+.tl-stage { position: relative; margin-top: 14px; }
+.tl-stage h3 { color: #ffd9a8 !important; display: flex; align-items: center; gap: 8px; }
+.tl-stage h3 i { position: absolute; left: -21px; width: 9px; height: 9px; border-radius: 50%; background: #ffd9a8; box-shadow: 0 0 10px #ffd9a8; }
+.tl-item { background: rgba(255,255,255,0.03); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; }
+.tl-title { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 4px; }
+.tl-item p { margin: 0 0 6px !important; font-size: 13px; }
+.tl-item .why { color: #ffe7c6; }
+.tl-feats small { color: var(--muted); display: block; margin-bottom: 4px; }
+
 /* ── Shadow side ── */
 .thorn { color: #ff5c78; font-size: 10px; margin-left: 4px; }
 .shadow-sec { margin-top: 18px; border: 1px solid rgba(255, 70, 100, 0.28); border-radius: 12px; padding: 4px 12px 10px; background: rgba(255, 40, 80, 0.05); }
@@ -201,7 +264,7 @@ textarea#notes {
 /* Touch devices: labels must not swallow drags; taps go to the canvas,
    which picks the nearest star or leaf within a finger's reach. */
 @media (hover: none) {
-  .core-label, .leaf-label { pointer-events: none; }
+  .core-label, .leaf-label, .origin-label { pointer-events: none; }
   #tooltip { display: none !important; }
   .only-touch { display: revert; }
   .only-mouse { display: none; }
@@ -279,6 +342,8 @@ textarea#notes {
 
   .core-label .name { font-size: 11px; }
   .core-label .native { display: none; }
+  #lens-key { top: calc(var(--safe-t) + 60px); max-width: calc(100vw - 24px); flex-wrap: wrap; justify-content: center; }
+  .origin-label .en { display: none; }
   .core-label.focus .native { display: block; }
   .core-label.focus .name { font-size: 13px; }
   .leaf-label { font-size: 10px; padding: 0 6px; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; }

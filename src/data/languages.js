@@ -298,6 +298,46 @@ export const LANGUAGES = [
   },
 ];
 
+// ── Sign languages ──
+// Vocabulary counts for sign languages are especially arbitrary: classifier
+// constructions are productive, so dictionaries list only a core lexicon.
+LANGUAGES.push(
+  {
+    id: 'ase', name: 'American Sign Language', native: 'ASL', family: 'sign', cluster: 'sign', branch: 'French Sign Language family',
+    speakers: 0.5, lexicon: { n: 10000, source: 'major ASL dictionaries (core lexicon only)', verify: true },
+    typology: { order: 'Topic–comment / SVO', script: 'none (signed); SignWriting, glosses', morphology: 'Simultaneous (space & movement)', tone: false },
+    region: 'USA and anglophone Canada',
+    features: ['spatial_grammar', 'facial_grammar', 'iconicity', 'late_access'],
+    concepts: [
+      { term: 'Deaf gain', gloss: 'Deafness reframed as a different, rich way of being rather than a loss', category: 'self', ref: 'Bauman & Murray (2014). Deaf Gain. U. Minnesota Press.' },
+    ],
+  },
+  {
+    id: 'bfi', name: 'British Sign Language', native: 'BSL', family: 'sign', cluster: 'sign', branch: 'BANZSL',
+    speakers: 0.15, lexicon: { n: 2500, source: 'BSL SignBank (core lexicon)', verify: true },
+    typology: { order: 'Topic–comment', script: 'none (signed)', morphology: 'Simultaneous (space & movement)', tone: false },
+    region: 'United Kingdom',
+    features: ['spatial_grammar', 'facial_grammar', 'iconicity', 'late_access'],
+    concepts: [],
+  },
+  {
+    id: 'xml', name: 'Malaysian Sign Language', native: 'Bahasa Isyarat Malaysia', family: 'sign', cluster: 'sign', branch: 'ASL-influenced (French SL family)',
+    speakers: 0.06, lexicon: { n: 5000, source: 'Buku Bahasa Isyarat Malaysia (estimate)', verify: true },
+    typology: { order: 'SVO / topic', script: 'none (signed)', morphology: 'Simultaneous (space & movement)', tone: false },
+    region: 'Malaysia',
+    features: ['spatial_grammar', 'facial_grammar', 'iconicity', 'late_access', 'diglossia'],
+    concepts: [],
+  },
+  {
+    id: 'csl', name: 'Chinese Sign Language', native: '中国手语', family: 'sign', cluster: 'sign', branch: 'Chinese SL',
+    speakers: 1.8, lexicon: { n: 8000, source: '国家通用手语词典 (2018), estimate', verify: true },
+    typology: { order: 'SVO / topic', script: 'none (signed); character-tracing signs', morphology: 'Simultaneous (space & movement)', tone: false },
+    region: 'China',
+    features: ['spatial_grammar', 'facial_grammar', 'iconicity', 'late_access'],
+    concepts: [],
+  },
+);
+
 // Accident-description pattern (Fausey & Boroditsky) is a contrast between
 // languages, so it's attached here rather than as a standalone feature.
 export const AGENCY = {

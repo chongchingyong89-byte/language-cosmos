@@ -102,6 +102,11 @@ export const FEATURE_SHADOWS = {
     claim: 'Speakers must declare their gender in almost every polite sentence. That makes misgendering easy and puts pressure on anyone who does not fit the binary.',
     evidence: 'speculative',
   }],
+  late_access: [{
+    claim: 'Oralism: after the 1880 Milan congress, many schools banned signing for about a century, delaying first-language access for generations of deaf children. Policy, not the language, did the harm.',
+    evidence: 'strong',
+    refs: ['Lane (1984). When the Mind Hears: A History of the Deaf. Random House.'],
+  }],
   evidentiality: [{
     claim: 'Hypothesis: marking gossip as "reportedly" may let speakers spread rumours while feeling less personally responsible for them.',
     evidence: 'speculative',

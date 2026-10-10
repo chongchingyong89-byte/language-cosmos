@@ -1,5 +1,7 @@
 # 语言宇宙 · Language Cosmos
 
+> **Core question:** how does the language you are born into (your mother tongue) shape your personality?
+
 A 3D universe for studying how each language may shape attitude, creativity, conservatism and personality.
 
 - **Cores** are languages. Core **volume ∝ vocabulary** (dictionary headwords); you can switch it to speakers.
@@ -7,6 +9,10 @@ A 3D universe for studying how each language may shape attitude, creativity, con
 - **Branches** grow in 8 fixed directions, one per trait domain, so the same direction means the same domain on every core.
 - **Leaves**: ● a linguistic feature, ◆ a culture-key word. Leaf size = strength of evidence; wireframe = speculative.
 - **Bridges** (arcs between cores) are bilingual studies where the *same person* changes when switching language.
+- **母语 · Mother tongue origin** (the glowing galactic core) opens a from-birth timeline: womb → infancy → childhood → adulthood, showing when a first language starts shaping the mind.
+- **Personality radar** on every language: its leaves add up to a hypothesised tilt on the Big Five plus interdependence, hierarchy and conservatism, weighted by evidence. The **Personality lens** (Filters) recolours the whole universe by one trait.
+- **Red thorns** mark the shadow side: evidence-graded negative effects.
+- **Sign languages** (ASL, BSL, BIM, CSL) are included. Deaf children's late access to a first language gives the strongest evidence that *timing* matters.
 
 ## Run
 
@@ -34,10 +40,14 @@ src/
   cosmos.js             Three.js world: galaxy, cores, trees, bridges, picking, camera
   ui.js                 list, detail panel, legend filters, tooltip, study notes
   audio.js              procedural soundscape: ambient pad, wind, twinkles, interaction cues
+  profile.js            builds each language's hypothesised personality tilt from its leaves
   data/
     taxonomy.js         8 trait domains, 5 evidence levels, families, galaxy order
     features.js         linguistic features → claimed effects (+ refs, how to test), bilingual bridges
-    languages.js        28 language cores: lexicon, speakers, typology, features, concepts
+    languages.js        32 language cores (incl. 4 sign languages): lexicon, speakers, typology, features, concepts
+    traits.js           leaf → personality-trait directions; measured bilingual personality shifts
+    development.js      from-birth timeline; when each feature's effect emerges
+    shadows.js          negative impacts (red thorns)
 scripts/serve.mjs       zero-dependency static server
 docs/RESEARCH_FRAMEWORK.md   brainstorm, hypotheses, study designs, roadmap
 ```

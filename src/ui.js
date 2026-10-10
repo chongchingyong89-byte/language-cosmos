@@ -1,5 +1,6 @@
 // DOM side: language list, detail panel, legend/filters, tooltip and study notes.
-import { CATEGORIES, EVIDENCE, FAMILIES } from './data/taxonomy.js';
+import { CATEGORIES, EVIDENCE, FAMILIES, TRAITS, STAGES } from './data/taxonomy.js';
+import { buildProfiles } from './profile.js';
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -31,12 +32,48 @@ const shadowList = (list) => list.map((s) => `
     ${s.refs?.length ? `<ul class="refs">${s.refs.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}
   </div>`).join('');
 
+const TRAIT_IDS = Object.keys(TRAITS);
+
+// Radar: dashed ring = neutral; outward = tilts up, inward = tilts down.
+function radarSvg(p, color) {
+  const n = TRAIT_IDS.length, R = 80, cx = 130, cy = 110;
+  const at = (i, r) => {
+    const a = (i / n) * Math.PI * 2;
+    return [+(cx + r * Math.sin(a)).toFixed(1), +(cy - r * Math.cos(a)).toFixed(1)];
+  };
+  const ring = (f, cls) => `<polygon class="${cls}" points="${TRAIT_IDS.map((_, i) => at(i, R * f).join(',')).join(' ')}"/>`;
+  const axes = TRAIT_IDS.map((_, i) => { const [x, y] = at(i, R); return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}"/>`; }).join('');
+  const pts = TRAIT_IDS.map((t, i) => at(i, R * (0.5 + 0.5 * p[t].norm)));
+  const labels = TRAIT_IDS.map((t, i) => {
+    const [x, y] = at(i, R + 17);
+    const v = p[t].norm;
+    return `<text x="${x}" y="${y}" class="${v > 0.05 ? 'up' : v < -0.05 ? 'down' : ''}">${TRAITS[t].short}</text>`;
+  }).join('');
+  return `<svg class="radar" viewBox="0 0 260 222" role="img" aria-label="Hypothesised personality tilt">
+    <g class="grid">${ring(1, 'r')}${ring(0.75, 'r')}${ring(0.25, 'r')}${axes}</g>
+    ${ring(0.5, 'neutral')}
+    <polygon class="shape" style="--c:${color}" points="${pts.map((q) => q.join(',')).join(' ')}"/>
+    ${pts.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.6" style="fill:${color}"/>`).join('')}
+    <g class="labels">${labels}</g>
+  </svg>`;
+}
+
+const tiltBar = (v) => {
+  const w = Math.abs(v) * 50;
+  return `<span class="tilt"><i class="${v >= 0 ? 'up' : 'down'}" style="left:${v >= 0 ? 50 : 50 - w}%;width:${w}%"></i></span>`;
+};
+
 const SHADOW_NOTE = 'A downside linked to a feature or a word, not a verdict on its speakers. Culture, history and economics usually matter more than grammar.';
 
 export class UI {
-  constructor(cosmos, { languages, features, bridges, shadows }, sound) {
+  constructor(cosmos, { languages, features, bridges, shadows, timeline, shifts, stageOf, agency }, sound) {
     this.cosmos = cosmos;
     this.shadows = shadows;
+    this.timeline = timeline;
+    this.shifts = shifts;
+    this.stageOf = stageOf;
+    this.agency = agency;
+    this.profiles = buildProfiles(languages, (l) => cosmos.itemsFor(l));
     this.sound = sound;
     const lex = languages.map((l) => l.lexicon.n);
     sound.setLexiconRange(Math.min(...lex), Math.max(...lex));
@@ -59,6 +96,12 @@ export class UI {
     // Deep link: index.html#ja opens straight onto a language.
     const fromHash = (instant) => {
       const id = decodeURIComponent(location.hash.slice(1));
+      if (id === 'origin') {
+        this.cosmos.focusOrigin({ instant });
+        this.showOrigin();
+        if (this.sheetState === 'peek') this.setSheet('half', { silent: true });
+        return;
+      }
       if (!this.byId.has(id) || id === this.cosmos.state.focus) return;
       this.cosmos.focusLanguage(id, { instant });
       this.showLanguage(id);
@@ -74,8 +117,15 @@ export class UI {
 
   select(data) {
     if (!data) return;
-    this.#setHash(data.langId ?? '');
+    this.#setHash(data.langId ?? (data.kind === 'origin' ? 'origin' : ''));
     this.closeOverlays();
+    if (data.kind === 'origin') {
+      this.sound.overview();
+      this.cosmos.focusOrigin();
+      this.showOrigin();
+      if (this.sheetState === 'peek') this.setSheet('half');
+      return;
+    }
     if (data.kind === 'core') this.sound.selectCore(this.byId.get(data.langId).lexicon.n);
     else if (data.kind === 'leaf') this.sound.selectLeaf(CAT_IDS.indexOf(data.item.category), EVIDENCE[data.item.evidence]?.rank, data.item.type === 'concept');
     else if (data.kind === 'bridge') this.sound.bridge();
@@ -284,6 +334,11 @@ export class UI {
       this.cosmos.set({ minEvidence: Number(evSel.value) });
     });
 
+    const lens = $('#lens');
+    lens.innerHTML = '<option value="">None</option>' + TRAIT_IDS.map((t) => `<option value="${t}">${TRAITS[t].label} ${TRAITS[t].zh}</option>`).join('');
+    lens.addEventListener('change', () => this.setLens(lens.value));
+    $('#lens-key').addEventListener('click', () => { lens.value = ''; this.setLens(''); });
+
     $('#size-mode').addEventListener('change', (e) => { this.sound.sweep(); this.cosmos.setSizeMode(e.target.value); });
     $('#toggle-trees').addEventListener('change', (e) => { this.sound.toggle(e.target.checked, 1); this.cosmos.set({ showAllTrees: e.target.checked }); });
     $('#toggle-bridges').addEventListener('change', (e) => { this.sound.toggle(e.target.checked, 3); this.cosmos.set({ showBridges: e.target.checked }); });
@@ -298,6 +353,15 @@ export class UI {
     vol.value = this.sound.volume;
     soundBox.addEventListener('change', () => { this.sound.setEnabled(soundBox.checked); this.#syncSoundButton(); });
     vol.addEventListener('input', () => this.sound.setVolume(Number(vol.value)));
+  }
+
+  setLens(trait) {
+    this.sound.sweep();
+    this.cosmos.setLens(trait || null, this.profiles);
+    document.body.classList.toggle('lens-on', !!trait);
+    const key = $('#lens-key');
+    key.hidden = !trait;
+    if (trait) key.innerHTML = `<b>Lens: ${TRAITS[trait].label} ${TRAITS[trait].zh}</b><span class="up">▲ gold tilts up</span><span class="down">▼ blue tilts down</span><span class="x">✕</span>`;
   }
 
   toggleSound() {
@@ -348,6 +412,8 @@ export class UI {
     } else if (data.kind === 'leaf') {
       const c = CATEGORIES[data.item.category];
       html = `<span style="color:${c.color}">${c.label}</span> ${badge(data.item.evidence)}<br><b>${esc(data.item.title)}</b>`;
+    } else if (data.kind === 'origin') {
+      html = '<b>母语 · Mother tongue</b><br><span class="muted">How a first language shapes you, from before birth to adulthood</span>';
     } else if (data.kind === 'bridge') {
       const b = data.bridge;
       html = `<span class="muted">Bilingual bridge</span> ${badge(b.evidence)}<br><b>${esc(this.byId.get(b.a).name)} ⇄ ${esc(this.byId.get(b.b).name)}</b>: ${esc(b.title)}`;
@@ -366,6 +432,9 @@ export class UI {
     for (const el of p.querySelectorAll('[data-lang]')) {
       el.addEventListener('click', () => this.select({ kind: 'core', langId: el.dataset.lang }));
     }
+    for (const el of p.querySelectorAll('[data-origin]')) {
+      el.addEventListener('click', () => this.select({ kind: 'origin' }));
+    }
     this.#renderList();
   }
 
@@ -374,12 +443,14 @@ export class UI {
     this.#panel(`
       <h2>Explore the language universe</h2>
       <p class="lead"><span class="only-mouse">Click a star · drag to orbit · scroll to zoom</span><span class="only-touch">Tap a star · drag to orbit · pinch to zoom</span></p>
+      <button class="start-btn" data-origin>Start here: <b>母语 · how a mother tongue shapes you, from birth</b> →</button>
       <h3>How to read it</h3>
       <p>Each glowing <b>core</b> is a language. Its <b>volume</b> is proportional to its vocabulary (dictionary headwords), or to its speakers if you switch the size mode.
       Cores cluster by <b>family</b>, and the coloured nebula behind a cluster marks the family.</p>
       <p>Every core grows <b>branches</b> in eight fixed directions, one per trait domain. The leaves are linguistic features (●) or culture-key words (◆) with a claimed effect on how speakers think, feel or act.</p>
       <ul class="howto">
         <li><b>Leaf size</b> shows strength of evidence. A <b>wireframe</b> leaf is speculative.</li>
+        <li>Each language has a <b>personality radar</b>: its leaves add up to a hypothesised tilt on the Big Five and on interdependence, hierarchy and conservatism. Use the <b>Personality lens</b> under Filters to light up the whole universe by one trait.</li>
         <li><b>Red thorns</b> mark the <b>shadow side</b>: a documented or hypothesised <em>negative</em> effect, graded on the same evidence scale. Toggle them under Filters.</li>
         <li><b>Gold arcs</b> between cores are <b>bilingual studies</b>, where the <em>same person</em> shifts when switching language. This is the cleanest evidence that language and personality are linked.</li>
         <li class="only-mouse">Click a core or leaf, or a name on the left. Press <kbd>Esc</kbd> to return to the overview, <kbd>/</kbd> to search and <kbd>M</kbd> to mute. Shift-click a domain to show only that one.</li>
@@ -390,7 +461,7 @@ export class UI {
       <h3>Two cautions before studying</h3>
       <p class="muted">1. <b>Language ≠ culture.</b> Most country-level links (future tense ↔ saving, pronoun-drop ↔ collectivism) are correlational. Within-person bilingual designs separate the two best.</p>
       <p class="muted">2. <b>Vocabulary counts are not comparable.</b> Dictionaries differ in scope, and agglutinative languages (Finnish, Turkish) have effectively unlimited word forms. Treat core size as "how much is documented", not "how expressive".</p>
-      <p class="stat">${this.languages.length} cores · ${nLeaves} leaves · ${this.bridges.length} bridges</p>
+      <p class="stat">${this.languages.length} cores · ${nLeaves} leaves · ${this.bridges.length} bridges · ${this.timeline.length} from-birth findings</p>
     `);
   }
 
@@ -415,6 +486,7 @@ export class UI {
         <div><small>Script</small><b>${esc(l.typology.script)}</b></div>
         <div><small>Tone</small><b>${l.typology.tone ? 'Yes' : 'No'}</b></div>
       </div>
+      ${this.#personality(id, fam?.color ?? '#ffffff')}
       ${byCat.map(([c, arr]) => `
         <section class="branch" style="--c:${CATEGORIES[c].color}">
           <h3><i></i>${CATEGORIES[c].label} <small>${CATEGORIES[c].zh}</small></h3>
@@ -469,6 +541,10 @@ export class UI {
         <h2>${item.type === 'concept' ? '◆' : '●'} ${esc(item.title)}</h2>
         ${badge(item.evidence)} <span class="muted">${esc(EVIDENCE[item.evidence]?.desc)}</span>
       </div>
+      ${item.stage || item.traits ? `<div class="meta-row">
+        ${item.stage ? `<span class="meta stage">Emerges: <b>${STAGES[item.stage].label}</b> (${STAGES[item.stage].age})</span>` : ''}
+        ${Object.entries(item.traits ?? {}).map(([t, d]) => `<span class="meta trait ${d > 0 ? 'up' : 'down'}" title="Hypothesised direction">${d > 0 ? '▲' : '▼'} ${TRAITS[t].label}</span>`).join('')}
+      </div>` : ''}
       ${item.example ? `<p class="example">${esc(item.example)}</p>` : ''}
       <h3>Claimed effect</h3><p>${esc(item.claim)}</p>
       ${item.mechanism ? `<h3>Mechanism</h3><p>${esc(item.mechanism)}</p>` : ''}
@@ -491,6 +567,7 @@ export class UI {
         ${badge(b.evidence)}
       </div>
       <p>${esc(b.claim)}</p>
+      ${this.shifts[b.title] ? `<div class="measured">${this.#shiftText(this.shifts[b.title], this.shifts[b.title].lang)}</div>` : ''}
       <h3>Sources</h3><ul class="refs">${b.refs.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
       ${this.shadows.bridges[b.title] ? `<section class="shadow-sec"><h3>▲ Shadow side</h3>${shadowList(this.shadows.bridges[b.title])}</section>` : ''}
       <p class="muted">Why bridges matter: the same people are compared with themselves, so culture, upbringing and genes are held constant, and the language of testing is the only thing that changes.</p>
@@ -499,6 +576,81 @@ export class UI {
         <button class="chip on" data-lang="${B.id}" style="--c:${FAMILIES[B.family]?.color}"><i></i>${esc(B.name)}</button>
       </div>
     `);
+  }
+
+  #personality(id, color) {
+    const p = this.profiles.get(id);
+    const active = TRAIT_IDS.filter((t) => p[t].from.length);
+    const nLeaves = new Set(active.flatMap((t) => p[t].from.map((f) => f.item.id))).size;
+    const measured = Object.entries(this.shifts).filter(([, s]) => s.lang === id || s.vs === id);
+    return `<section class="persona">
+      <h3>Personality tilt (hypothesised) <small>人格倾向</small></h3>
+      ${active.length ? `
+        ${radarSvg(p, color)}
+        <p class="muted small">Built from ${nLeaves} leaves, each weighted by its evidence. The dashed ring is neutral. This describes possible pressures from the language, not any actual person.</p>
+        <div class="traits">${active.sort((a, b) => Math.abs(p[b].norm) - Math.abs(p[a].norm)).map((t) => `
+          <div class="trait-row">
+            <span class="tn">${TRAITS[t].label} <small>${TRAITS[t].zh}</small></span>
+            ${tiltBar(p[t].norm)}
+            <span class="from">${p[t].from.map((f) => `${f.dir > 0 ? '+' : '−'} ${esc(f.item.title)}`).join(' · ')}</span>
+          </div>`).join('')}
+        </div>`
+      : '<p class="muted small">No personality-linked leaves yet. The effects found so far for this language are perceptual or cognitive.</p>'}
+      ${measured.map(([title, s]) => `<div class="measured">${this.#shiftText(s, id)} <span class="muted">(${esc(title)})</span></div>`).join('')}
+    </section>`;
+  }
+
+  // "In English, the same bilinguals scored higher on …"
+  #shiftText(s, viewpoint) {
+    const flip = viewpoint !== s.lang;
+    const me = this.byId.get(flip ? s.vs : s.lang).name, other = this.byId.get(flip ? s.lang : s.vs).name;
+    const parts = Object.entries(s.shifts).map(([t, d]) => {
+      const dir = flip ? -d : d;
+      return `<span class="${dir > 0 ? 'up' : 'down'}">${dir > 0 ? '▲ higher' : '▼ lower'} ${TRAITS[t].label}</span>`;
+    });
+    return `<b>Measured in bilinguals:</b> in ${esc(me)}, the same people scored ${parts.join(', ')} than in ${esc(other)}.`;
+  }
+
+  showOrigin() {
+    const featTitle = (fid) => this.features[fid]?.title ?? this.agency?.[fid]?.title ?? fid;
+    this.#panel(`
+      <div class="lang-head origin-head" style="--c:#ffd9a8">
+        <div class="native-big">母语</div>
+        <h2>Mother tongue: from birth</h2>
+        <div class="muted">How a first language gets into the mind, stage by stage</div>
+      </div>
+      <p class="lead">This app's core question: how does the language you are born into shape your personality?</p>
+      <div class="lessons">
+        <div><b>1 · Timing matters most.</b> An early first language, whichever one, builds understanding of other minds. A late first language leaves lifelong gaps.</div>
+        <div><b>2 · Which language steers.</b> The branches show the directions: attention, emotion, self and values.</div>
+        <div><b>3 · Imprints persist.</b> Even a forgotten mother tongue leaves traces, and emotion stays rooted in it.</div>
+      </div>
+      <div class="timeline">
+        ${Object.entries(STAGES).map(([sid, st]) => {
+          const entries = this.timeline.filter((e) => e.stage === sid);
+          const feats = Object.entries(this.stageOf).filter(([, s]) => s === sid).map(([fid]) => fid);
+          if (!entries.length && !feats.length) return '';
+          return `<section class="tl-stage">
+            <h3><i></i>${st.label} <small>${st.age} · ${st.zh}</small></h3>
+            ${entries.map((e) => `<div class="tl-item">
+              <div class="tl-title"><b>${esc(e.title)}</b> ${badge(e.evidence)}</div>
+              <p>${esc(e.claim)}</p>
+              <p class="why">→ ${esc(e.why)}</p>
+              <ul class="refs">${e.refs.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
+            </div>`).join('')}
+            ${feats.length ? `<div class="tl-feats"><small>Language effects that emerge here:</small><div class="chips">${feats.map((fid) => `<button class="chip on" data-feature="${fid}" style="--c:${CATEGORIES[(this.features[fid] ?? this.agency?.[fid])?.category]?.color ?? '#fff'}"><i></i>${esc(featTitle(fid))}</button>`).join('')}</div></div>` : ''}
+          </section>`;
+        }).join('')}
+      </div>
+    `);
+    for (const btn of document.querySelectorAll('[data-feature]')) {
+      btn.addEventListener('click', () => {
+        const fid = btn.dataset.feature;
+        const lang = this.languages.find((l) => l.features.includes(fid) || l[fid]);
+        const item = lang && this.cosmos.itemsFor(lang).find((i) => i.id === fid);
+        if (item) this.select({ kind: 'leaf', langId: lang.id, item });
+      });
+    }
   }
 
   #exportNotes() {

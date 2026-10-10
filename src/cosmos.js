@@ -62,13 +62,15 @@ const coreFragment = /* glsl */`
   }`;
 
 export class Cosmos {
-  constructor(container, { languages, features, bridges, agency, shadows }) {
+  constructor(container, { languages, features, bridges, agency, shadows, traits, stageOf }) {
     this.container = container;
     this.languages = languages;
     this.features = features;
     this.bridgesData = bridges;
     this.agency = agency;
     this.shadows = shadows;
+    this.traits = traits;
+    this.stageOf = stageOf;
     this.byId = new Map(languages.map((l) => [l.id, l]));
     this.nodes = new Map();       // langId → { group, core, halo, label, tree, leaves, trunks, radius }
     this.bridges = [];
@@ -85,6 +87,7 @@ export class Cosmos {
 
     this.#initRenderer();
     this.#buildBackdrop();
+    this.#buildOrigin();
     this.#layout();
     this.#buildCores();
     this.#buildAllTrees();
@@ -228,6 +231,48 @@ export class Cosmos {
     this.scene.add(bulge);
   }
 
+  // The galactic core is the "Mother tongue" origin: click it for the
+  // from-birth timeline. A fat invisible sphere makes it easy to hit.
+  #buildOrigin() {
+    this.origin = new THREE.Mesh(new THREE.SphereGeometry(9, 16, 16), new THREE.MeshBasicMaterial({ visible: false }));
+    this.origin.userData = { kind: 'origin' };
+    this.scene.add(this.origin);
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(13, 0.07, 8, 128),
+      new THREE.MeshBasicMaterial({ color: '#ffd9a8', transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }),
+    );
+    ring.rotation.x = Math.PI / 2;
+    this.originRing = ring;
+    this.scene.add(ring);
+    const el = document.createElement('div');
+    el.className = 'origin-label';
+    el.innerHTML = '<span class="zh">母语</span><span class="en">Mother tongue · from birth</span>';
+    el.addEventListener('click', () => this.handlers.select({ kind: 'origin' }));
+    const label = new CSS2DObject(el);
+    label.position.set(0, 9, 0);
+    this.scene.add(label);
+  }
+
+  // Personality lens: tint and swell each star by its tilt on one trait.
+  setLens(trait, profiles) {
+    this.lens = trait;
+    const up = new THREE.Color('#ffd27a'), down = new THREE.Color('#5b7dff');
+    for (const [id, n] of this.nodes) {
+      const el = n.label.element.querySelector('.lens');
+      if (!trait) {
+        n.halo.material.color.copy(n.color);
+        n.lensScale = 1;
+        el.textContent = '';
+        continue;
+      }
+      const v = profiles.get(id)?.[trait]?.norm ?? 0;
+      n.halo.material.color.copy(n.color).lerp(v >= 0 ? up : down, Math.min(Math.abs(v) * 1.2, 1));
+      n.lensScale = 0.6 + Math.abs(v) * 1.2;
+      el.textContent = Math.abs(v) < 0.05 ? '·' : `${v > 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(2)}`;
+      el.dataset.dir = v > 0.05 ? 'up' : v < -0.05 ? 'down' : '';
+    }
+  }
+
   // Families sit as clusters along the spiral arms; members ring their cluster centre.
   #layout() {
     const clusters = new Map();
@@ -295,7 +340,7 @@ export class Cosmos {
 
       const el = document.createElement('div');
       el.className = 'core-label';
-      el.innerHTML = `<span class="name">${lang.name}</span><span class="native">${lang.native !== lang.name ? lang.native : ''}</span>`;
+      el.innerHTML = `<span class="name">${lang.name}</span><span class="native">${lang.native !== lang.name ? lang.native : ''}</span><span class="lens"></span>`;
       el.addEventListener('click', () => this.handlers.select({ kind: 'core', langId: lang.id }));
       const label = new CSS2DObject(el);
       group.add(label);
@@ -304,7 +349,7 @@ export class Cosmos {
       group.add(tree);
       this.scene.add(group);
 
-      const node = { lang, group, core, halo, label, tree, leaves: [], trunks: [], radius: 1, targetRadius: 1, color };
+      const node = { lang, group, core, halo, label, tree, leaves: [], trunks: [], radius: 1, targetRadius: 1, color, lensScale: 1 };
       this.nodes.set(lang.id, node);
       this.#setRadius(node, this.#radiusFor(lang), true);
     }
@@ -323,13 +368,14 @@ export class Cosmos {
     const items = [];
     for (const fid of lang.features) {
       const f = this.features[fid];
-      if (f) items.push({ ...f, id: fid, type: 'feature', example: f.ex?.[lang.id], shadow: this.shadows.features[fid] });
+      if (f) items.push({ ...f, id: fid, type: 'feature', example: f.ex?.[lang.id], shadow: this.shadows.features[fid], traits: this.traits.features[fid], stage: this.stageOf[fid] });
     }
-    if (lang.agentive) items.push({ ...this.agency.agentive, id: 'agentive', type: 'feature', shadow: this.shadows.features.agentive });
-    if (lang.nonagentive) items.push({ ...this.agency.nonagentive, id: 'nonagentive', type: 'feature', shadow: this.shadows.features.nonagentive });
+    for (const k of ['agentive', 'nonagentive']) {
+      if (lang[k]) items.push({ ...this.agency[k], id: k, type: 'feature', shadow: this.shadows.features[k], traits: this.traits.features[k], stage: this.stageOf[k] });
+    }
     for (const c of lang.concepts ?? []) {
       items.push({
-        id: `concept:${c.term}`, type: 'concept', title: c.term, category: c.category, shadow: this.shadows.concepts[c.term],
+        id: `concept:${c.term}`, type: 'concept', title: c.term, category: c.category, shadow: this.shadows.concepts[c.term], traits: this.traits.concepts[c.term],
         evidence: c.evidence ?? 'speculative', claim: c.gloss, refs: c.ref ? [c.ref] : [],
         mechanism: 'A culture-key word: having a word may make a concept easier to notice, remember and talk about. A word is not the same as a feeling or a value, so treat this as a prompt for study.',
         study: 'Free-listing and scenario-rating tasks: do speakers recognise and use this concept more, and faster, than translation-equivalent groups?',
@@ -539,8 +585,10 @@ export class Cosmos {
       }
       if (best) return { object: best };
     }
-    if (!this.state.showBridges) return null;
-    return this.raycaster.intersectObjects(this.bridges.filter((b) => b.group.visible).map((b) => b.hit), false)[0] ?? null;
+    const bridgeHit = this.state.showBridges
+      ? this.raycaster.intersectObjects(this.bridges.filter((b) => b.group.visible).map((b) => b.hit), false)[0]
+      : null;
+    return bridgeHit ?? this.raycaster.intersectObject(this.origin, false)[0] ?? null;
   }
 
   #updateHover() {
@@ -593,6 +641,17 @@ export class Cosmos {
     const mid = b.curve.getPoint(0.5);
     const span = b.curve.v0.distanceTo(b.curve.v2);
     this.#flyTo(mid.clone().add(new THREE.Vector3(0, span * 0.35, span * 0.9 + 15).multiplyScalar(this.#fit())), mid);
+  }
+
+  focusOrigin({ instant = false } = {}) {
+    this.state.focus = null;
+    this.applyFilters();
+    const cam = new THREE.Vector3(0, 38, 62).multiplyScalar(this.#fit(0.6)), target = new THREE.Vector3(0, 0, 0);
+    if (instant) {
+      this.tween = null;
+      this.camera.position.copy(cam);
+      this.controls.target.copy(target);
+    } else this.#flyTo(cam, target);
   }
 
   overview() {
@@ -672,6 +731,8 @@ export class Cosmos {
     }
 
     this.dust.rotation.y += dt * 0.004;
+    this.originRing.rotation.z += dt * 0.05;
+    this.originRing.scale.setScalar(1 + Math.sin(time * 0.8) * 0.04);
 
     for (const n of this.nodes.values()) {
       n.core.material.uniforms.uTime.value = time;
@@ -685,7 +746,7 @@ export class Cosmos {
         }
       }
       const pulse = 1 + Math.sin(time * 1.3 + n.group.position.x) * 0.06;
-      n.halo.scale.setScalar(n.radius * 6 * pulse);
+      n.halo.scale.setScalar(n.radius * 6 * pulse * n.lensScale);
       // Fade distant labels so the overview stays readable.
       const d = this.camera.position.distanceTo(n.group.position);
       n.label.element.style.opacity = Math.max(0.15, Math.min(1, 1.6 - d / 260));

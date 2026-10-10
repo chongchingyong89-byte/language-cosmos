@@ -78,6 +78,7 @@
         </select>
       </label>
       <label>Evidence <select id="ev-filter"></select></label>
+      <label class="lens-ctl" title="Recolour every star by its hypothesised tilt on one trait">Personality lens <select id="lens"></select></label>
       <label class="tog"><input id="toggle-trees" type="checkbox" checked> All trees</label>
       <label class="tog"><input id="toggle-bridges" type="checkbox" checked> Bridges</label>
       <label class="tog shadow-tog" title="Red thorns mark leaves with a documented or hypothesised downside"><input id="toggle-shadow" type="checkbox" checked> Shadow side</label>
@@ -89,6 +90,7 @@
     </div>
   </footer>
 
+  <button id="lens-key" class="glass" hidden title="Turn the lens off"></button>
   <div id="tooltip" hidden></div>
 
   <script type="module" src="src/main.js"></script>
