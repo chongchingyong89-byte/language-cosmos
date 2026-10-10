@@ -5,6 +5,63 @@ import { Reflector } from 'three/addons/objects/Reflector.js';
 import { World3D, LOW } from './base.js';
 import * as T from './textures.js';
 import { chibiSvg } from '../shops/chibi.js';
+import { loadVrmHeroine } from './heroineVrm.js';
+
+// Walkways between the shelves: shoppers only travel along these edges.
+const NODES = {
+  A: [-4.2, -3.6], B: [-1.4, -3.6], C: [1.6, -3.6],
+  G: [-4.2, -0.5], H: [-1.4, -0.5], I: [1.6, -0.5],
+  D: [-4.2, 2.6], E: [-1.4, 2.6], F: [1.6, 2.6],
+};
+const EDGES = { A: 'BG', B: 'ACH', C: 'BI', G: 'AD', H: 'BE', I: 'CF', D: 'GE', E: 'DFH', F: 'EI' };
+// Which way to face when browsing at a node (towards the nearest shelf).
+const BROWSE = { G: -Math.PI / 2, H: -Math.PI / 2, I: -Math.PI / 2, A: Math.PI, B: Math.PI, C: Math.PI };
+
+// A shopper wandering the aisles, pausing to browse.
+class Shopper {
+  constructor(hero, start) {
+    this.hero = hero;
+    this.node = start;
+    this.target = start;
+    this.wait = 1 + Math.random() * 3;
+    hero.setUmbrella(false);
+    hero.placeAt(new THREE.Vector3(NODES[start][0], 0, NODES[start][1]), new THREE.Euler(0, Math.random() * 6, 0));
+  }
+
+  update(dt, avoid) {
+    const p = this.hero.root.position;
+    let speed = 0;
+    if (this.wait > 0) {
+      this.wait -= dt;
+      const face = BROWSE[this.node];
+      if (face != null) this.#turn(face, dt);
+      if (this.wait <= 0) {
+        const opts = EDGES[this.node];
+        this.target = opts[Math.floor(Math.random() * opts.length)];
+      }
+    } else {
+      const [tx, tz] = NODES[this.target];
+      const dx = tx - p.x, dz = tz - p.z, d = Math.hypot(dx, dz);
+      const blocked = avoid.some((o) => o !== p && Math.hypot(o.x - (p.x + dx / d * 0.7), o.z - (p.z + dz / d * 0.7)) < 0.75);
+      if (d < 0.08) {
+        this.node = this.target;
+        this.wait = BROWSE[this.node] != null ? 2 + Math.random() * 4 : 0.2;
+      } else if (!blocked) {
+        speed = 1.05;
+        p.x += (dx / d) * speed * dt;
+        p.z += (dz / d) * speed * dt;
+        this.#turn(Math.atan2(dx, dz), dt);
+      }
+    }
+    this.hero.update(dt, speed);
+  }
+
+  #turn(angle, dt) {
+    const r = this.hero.root.rotation;
+    const diff = Math.atan2(Math.sin(angle - r.y), Math.cos(angle - r.y));
+    r.y += diff * Math.min(dt * 6, 1);
+  }
+}
 
 const ROOM = { x0: -5.65, x1: 5.65, z0: -4.55, z1: 4.75 };
 const DOOR = { x: 1.6, half: 0.75 };
@@ -55,7 +112,7 @@ const SOLIDS = [
 ];
 
 export class InteriorWorld extends World3D {
-  constructor(container, { sound, onDiscover, found = new Set(), items, onZone, onExit }) {
+  constructor(container, { sound, onDiscover, found = new Set(), items, onZone, onExit, onSay }) {
     super(container, {
       sound, onDiscover, found, readables: SHOP_WORDS,
       background: '#f4f1e8', bloom: [0.18, 0.35, 1.35], exposure: 0.85,
@@ -64,12 +121,15 @@ export class InteriorWorld extends World3D {
     this.items = items;
     this.onZone = onZone;
     this.onExit = onExit;
+    this.onSay = onSay;
+    this.shoppers = [];
     this.readRange = 2.2;
     this.walkSpeed = 1.3;
     this.runSpeed = 2.6;
     this.zone = null;
     this.#build();
     this.spawnHero(new THREE.Vector3(DOOR.x, 0, 3.0), Math.PI, { umbrella: false }); // left in the stand outside
+    if (!LOW) this.#spawnPeople(); // phones keep the 2D clerk and no extra shoppers
   }
 
   // ── Scene ────────────────────────────────────────────────────────────────
@@ -253,6 +313,38 @@ export class InteriorWorld extends World3D {
     this.clerkMesh = m;
   }
 
+  // A 3D clerk in uniform behind the till, and two shoppers in the aisles.
+  // They reuse the anime model, recoloured into different people.
+  async #spawnPeople() {
+    try {
+      const clerk = await loadVrmHeroine();
+      if (this.disposed) return;
+      clerk.tint({ hair: '#2a1a12', top: '#3bbf9a', bottoms: '#3a3f55' });
+      clerk.setUmbrella(false);
+      clerk.placeAt(new THREE.Vector3(5.35, 0, 0.6), new THREE.Euler(0, -Math.PI / 2, 0));
+      this.scene.add(clerk.root);
+      this.clerk = clerk;
+      if (this.clerkMesh) this.clerkMesh.visible = false;
+      clerk.bow();
+      this.onSay?.('いらっしゃいませ！', 'irasshaimase', 'Welcome!');
+      this.sound.chime();
+
+      const looks = [
+        { hair: '#151515', top: '#5b7dd6', bottoms: '#8a6a4a', start: 'A' },
+        { hair: '#c9a46a', top: '#e98a9a', bottoms: '#2b2f3a', start: 'H' },
+      ];
+      for (const look of looks) {
+        const npc = await loadVrmHeroine();
+        if (this.disposed) return;
+        npc.tint(look);
+        this.scene.add(npc.root);
+        this.shoppers.push(new Shopper(npc, look.start));
+      }
+    } catch (e) {
+      console.warn('[interior] extra people failed to load', e);
+    }
+  }
+
   // ── Hooks ────────────────────────────────────────────────────────────────
   constrain(next) {
     const r = 0.28;
@@ -260,6 +352,9 @@ export class InteriorWorld extends World3D {
     if (next.x < ROOM.x0 || next.x > ROOM.x1 || next.z < ROOM.z0 || next.z > (inDoor ? 5.4 : ROOM.z1)) return null;
     for (const [x0, x1, z0, z1] of SOLIDS) {
       if (next.x > x0 - r && next.x < x1 + r && next.z > z0 - r && next.z < z1 + r) return null;
+    }
+    for (const sh of this.shoppers) {
+      if (Math.hypot(next.x - sh.hero.root.position.x, next.z - sh.hero.root.position.z) < 0.55) return null;
     }
     return next;
   }
@@ -277,7 +372,15 @@ export class InteriorWorld extends World3D {
       const d = Math.hypot(hero.position.x - z.pos[0], hero.position.z - z.pos[1]);
       if (d < bestD) { bestD = d; best = z; }
     }
-    if (best !== this.zone) { this.zone = best; this.onZone?.(best); }
+    if (best !== this.zone) {
+      this.zone = best;
+      this.onZone?.(best);
+      if (best?.type === 'till' && this.clerk) { this.clerk.bow(); this.onSay?.('いらっしゃいませ。お待たせしました。', 'irasshaimase. omatase shimashita.', 'Welcome. Sorry to keep you waiting.'); }
+    }
+    // The clerk breathes and blinks; shoppers wander and browse.
+    this.clerk?.update(dt, 0);
+    const others = [hero.position, ...this.shoppers.map((s) => s.hero.root.position)];
+    for (const sh of this.shoppers) sh.update(dt, others);
     // Clerk bob, so he feels alive
     if (this.clerkMesh) this.clerkMesh.position.y = 0.95 + Math.sin(t * 2) * 0.01;
     // Leaving through the door

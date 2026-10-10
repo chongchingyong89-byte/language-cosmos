@@ -88,6 +88,24 @@ export class VrmHeroine {
 
   smile(seconds = 1.6) { this.smileT = seconds; }
 
+  // Recolour hair / top / bottoms (MToon colour multiplies the texture), so one
+  // model can play several different people.
+  tint({ hair, top, bottoms } = {}) {
+    this.vrm.scene.traverse((o) => {
+      for (const m of [o.material].flat()) {
+        if (!m?.color) continue;
+        const n = m.name ?? '';
+        const c = /hair/i.test(n) ? hair : /tops/i.test(n) ? top : /bottoms/i.test(n) ? bottoms : null;
+        if (!c) continue;
+        m.color.set(c);
+        m.shadeColorFactor?.set(c).multiplyScalar(0.7);
+      }
+    });
+  }
+
+  // お辞儀: a polite bow from the waist, ~1.4 s.
+  bow() { this.bowT = 1.4; }
+
   #curl(side, amount) {
     const sign = side === 'left' ? -1 : 1;
     for (const finger of ['Index', 'Middle', 'Ring', 'Little']) {
@@ -160,7 +178,9 @@ export class VrmHeroine {
     const twist = (0.09 * w + 0.04 * r) * Math.sin(f);
     hips.rotation.set(0, -twist, 0.03 * w * Math.sin(2 * f));
     // Spine counter-twists; head stays level and looks where she's going.
-    B('spine').rotation.set(0.03 * w + 0.16 * r + Math.sin(t * 2) * 0.008, twist * 0.9, 0);
+    this.bowT = Math.max(0, (this.bowT ?? 0) - dt);
+    const bowAngle = this.bowT > 0 ? Math.sin((1 - this.bowT / 1.4) * Math.PI) * 0.55 : 0;
+    B('spine').rotation.set(0.03 * w + 0.16 * r + Math.sin(t * 2) * 0.008 + bowAngle, twist * 0.9, 0);
     B('chest')?.rotation.set(0.02 * r, twist * 0.4, 0);
     B('neck').rotation.set(-0.04 * r, -twist * 1.1, 0);
     B('head').rotation.set(-0.02 * r, 0, Math.sin(t * 0.9) * 0.015 * (1 - w));

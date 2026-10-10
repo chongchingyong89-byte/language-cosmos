@@ -404,6 +404,7 @@ export class ShopGame {
       onDiscover: (r, n) => this.#discover(r, n, total, 'shopwords'),
       onZone: (z) => this.#zonePrompt(z),
       onExit: () => this.#leaveShop(),
+      onSay: (jp, romaji, en) => this.#clerkSays(jp, romaji, en),
     });
     this.world.onKeyAction = (k) => {
       if (k === 'e') this.#useZone(1);
@@ -420,6 +421,17 @@ export class ShopGame {
     });
     this.#bindJoystick($('.joy', wrap));
     this.#cardLoop(wrap);
+  }
+
+  // The 3D clerk speaks: show it as a speech toast.
+  #clerkSays(jp, romaji, en) {
+    const toast = $('.world-toast', this.root);
+    if (!toast) return;
+    toast.innerHTML = `🗣️ Clerk: <b class="jp">${esc(jp)}</b> <span>${esc(romaji)}</span> = ${esc(en)}`;
+    toast.hidden = false;
+    toast.classList.remove('show');
+    void toast.offsetWidth;
+    toast.classList.add('show');
   }
 
   #renderList() {
@@ -569,7 +581,16 @@ export class ShopGame {
         }
         card.hidden = false;
         const W = wrap.clientWidth;
-        card.style.transform = `translate(${Math.min(Math.max(rc.x, 140), W - 140)}px, ${Math.max(rc.y, 120)}px) translate(-50%, -105%)`;
+        let x = Math.min(Math.max(rc.x, 140), W - 140);
+        const y = Math.max(rc.y, 120);
+        // Don't cover Mum's list: slide the card to the right of it.
+        const list = wrap.querySelector('.shop-list');
+        if (list) {
+          const lr = list.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+          const right = lr.right - wr.left, bottom = lr.bottom - wr.top;
+          if (x - 125 < right && y - 170 < bottom) x = Math.min(right + 135, W - 130);
+        }
+        card.style.transform = `translate(${x}px, ${y}px) translate(-50%, -105%)`;
       }
       this.cardRaf = requestAnimationFrame(tick);
     };
