@@ -30,4 +30,18 @@ export const RECORDINGS = {
       page: 'https://commons.wikimedia.org/wiki/File:WikiNgigel_%E2%80%93_Gambus_Lampung_%E2%80%93_Dipikkon_Bapak_%E2%80%93_Bandar_Lampung_(4_July_2026).wav',
     },
   },
+  cn: {
+    street: {
+      title: 'Èrquán Yìng Yuè (二泉映月)', what: 'erhu solo', by: 'Abing (composer), performed by Zhang Peijian, recorded by David290',
+      license: 'CC BY-SA 4.0',
+      src: 'https://upload.wikimedia.org/wikipedia/commons/transcoded/f/ff/%E4%BA%8C%E6%B3%89%E6%98%A0%E6%9C%88.ogg/%E4%BA%8C%E6%B3%89%E6%98%A0%E6%9C%88.ogg.mp3',
+      page: 'https://commons.wikimedia.org/wiki/File:%E4%BA%8C%E6%B3%89%E6%98%A0%E6%9C%88.ogg',
+    },
+    shop: {
+      title: 'Rain Beating on Banana Leaves (雨打芭蕉)', what: 'Cantonese music, gaohu solo', by: 'folk tune arr. Qiu Hechou, performed by Zhang Peijian, recorded by David290',
+      license: 'CC BY-SA 4.0',
+      src: 'https://upload.wikimedia.org/wikipedia/commons/transcoded/f/f3/%E9%9B%A8%E6%89%93%E8%8A%AD%E8%95%89.ogg/%E9%9B%A8%E6%89%93%E8%8A%AD%E8%95%89.ogg.mp3',
+      page: 'https://commons.wikimedia.org/wiki/File:%E9%9B%A8%E6%89%93%E8%8A%AD%E8%95%89.ogg',
+    },
+  },
 };

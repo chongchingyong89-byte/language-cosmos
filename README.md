@@ -23,7 +23,7 @@ First-time visitors choose a mode on the welcome screen; the ⇄ pill switches a
 
 ## 🏪 World Shops
 
-Learn a language, its everyday attitudes and its favourite snacks at a shop counter. Phase 1 is open: **🇯🇵 あまやどり**, a rainy night in Tokyo.
+Learn a language, its everyday attitudes and its favourite snacks at a shop counter. Three shops are open: **🇯🇵 あまやどり** (a rainy night in Tokyo), **🇲🇾 Jalan Budi** (a rainy evening in Kuala Lumpur) and **🇨🇳 小卖部** (a summer storm in China).
 
 - **The street (3D):** walk an anime heroine with a clear umbrella through a wet, reflective street (WASD/arrows, or a joystick on phones). Find 13 Japanese words on signs, shops and the road (止まれ, 横断歩道, 自動販売機, 点字ブロック…), each with a reading, meaning and culture note.
 - **Inside the konbini (3D):** do Mum's shopping. Her list is written with counter words (おにぎり 二個, お茶 一本, せんべい 三枚), so you must read 本・個・枚・冊 to take the right number from the shelves. 11 more words hang over the aisles (飲み物, お菓子, パン, 雑誌, レジ…).
@@ -31,14 +31,17 @@ Learn a language, its everyday attitudes and its favourite snacks at a shop coun
 - **The night shift:** switch roles and serve customers with different attitudes (hurried, indirect, very polite…): counter words, polite shop phrases, prices, katakana.
 - Generated koto lo-fi music in the Japanese *in* scale, rain, door chime and footsteps.
 - **🇲🇾 Phase 2 · Kedai Runcit Budi:** an evening shift at a Malaysian shophouse mamak. Penjodoh bilangan (sebiji kuih, sekeping roti canai, secawan teh tarik, sekaki payung, seekor kucing), calling customers Pak cik / Mak cik / Kak / Adik, prices in ringgit and sen, Manglish "Can lah!" and "tapau", "Makan sini atau bungkus?", "Tak apa", and reduplication (renyai-renyai). Keroncong and gambus recordings play in the background.
-- Coming phases: China, Korea, Thailand, India, France, Mexico.
+  - **In 3D:** stroll Jalan Budi, a row of KL shophouses with a covered *kaki lima* (five-foot way), Peranakan tiles, a monsoon drain, motorbikes and the twin towers on the skyline, and find 16 Malay words (Farmasi, Dobi, Kedai Kopi, Dilarang Merokok, Hentian Bas…). She closes her umbrella under the arcade. Then shop in Restoran Budi Maju, a mamak with a roti canai griddle, teh tarik being pulled, kuih and nasi lemak (13 more words), and pay Anneh at the *kaunter*: "Ada lagi?", "Makan sini atau bungkus?", "Nak plastik?" → "Tak apa", in ringgit notes and sen coins.
+- **🇨🇳 Phase 3 · 小卖部:** a stormy summer night at a tiny corner shop by an apartment gate. Measure words (两瓶冰红茶, 一根冰棍, 一把伞, 一串糖葫芦, 一只猫), 两 vs 二, prices in 块 and 毛 with tone sandhi (一块 yí kuài), tones that change meaning (四 sì vs 十 shí, 买 mǎi vs 卖 mài), calling people 叔叔 / 阿姨 / 大爷 / 老板, 扫码, 不用了 and 慢走. A Cantonese gaohu recording (雨打芭蕉, "Rain Beating on Banana Leaves") plays during the shift.
+- Coming phases: Korea, Thailand, India, France, Mexico.
 
-Direct links: `#shop` (all shops), `#shop-jp` (the street), `#shop-jp/inside` (the 3D shop), `#shop-jp/play` (the night shift).
+Direct links: `#shop` (all shops), `#shop-jp` (the street), `#shop-jp/inside` (the 3D shop), `#shop-jp/play` (the night shift); the same for `#shop-my`, and `#shop-cn` / `#shop-cn/play`.
 
 ## Credits
 
 - Heroine: **VRM1_Constraint_Twist_Sample** © 2022 pixiv Inc., [VRM Public License 1.0](https://vrm.dev/licenses/1.0/) (avatar use by everyone, redistribution and modification allowed). Loaded with [three-vrm](https://github.com/pixiv/three-vrm) (MIT).
 - Voice recordings: Wikimedia Commons contributors (see below).
+- Shop music, streamed from Wikimedia Commons and credited on screen: Shika no Tōne (Araki Kodō III, public domain); Koto is home in Finnish (Antti Luode, CC BY 3.0); Bunga Teratai (Tania Dewi & Orkes Keroncong Side of X, public domain); Dipikkon Bapak (Gambus Lampung, rec. Xiangliangzai, CC BY-SA 4.0); 雨打芭蕉 and 二泉映月 (performed by Zhang Peijian, rec. David290, CC BY-SA 4.0).
 
 ## Run
 
@@ -68,8 +71,8 @@ src/
   audio.js              procedural soundscape: ambient pad, wind, twinkles, interaction cues
   profile.js            builds each language's hypothesised personality tilt from its leaves
   kids/                 Explorer mode: data.js (greetings, powers, tour, quiz, badges), explorer.js, games.js, voices.js
-  shops/                World Shops: engine.js (flow + counter game), checkout.js (paying at the till), japan.js (shop data), registry.js, chibi.js, rain.js
-  world/                3D scenes: base.js (renderer, camera, controls, signs), street.js, interior.js, heroineVrm.js (anime avatar), heroine.js (fallback), textures.js
+  shops/                World Shops: engine.js (flow + counter game), checkout.js (paying at the till), japan.js / malaysia.js / china.js (shop data), music.js (recordings), registry.js, chibi.js, rain.js
+  world/                3D scenes: base.js (renderer, camera, controls, signs), street.js + interior.js (Tokyo), klStreet.js + mamak.js (Kuala Lumpur), heroineVrm.js (anime avatar), heroine.js (fallback), textures.js
 assets/heroine.vrm      the anime heroine (pixiv VRM sample)
   data/
     taxonomy.js         8 trait domains, 5 evidence levels, families, galaxy order

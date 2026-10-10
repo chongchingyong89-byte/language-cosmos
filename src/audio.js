@@ -20,6 +20,13 @@ const SHOP_MUSIC = {
     melody: [60, 62, 64, 67, 69, 72, 74, 76, 79, 81],
     chords: [[36, 48, 52, 55, 60], [41, 53, 57, 60, 65], [43, 55, 59, 62, 67], [36, 48, 52, 55, 64]],
   },
+  // cn: the "zhi" mode of the Chinese pentatonic (G A C D E) over open fifths,
+  // plucked like a guzheng.
+  cn: {
+    bpm: 76, gain: 0.45, density: 0.46,
+    melody: [62, 64, 67, 69, 71, 74, 76, 79, 81, 83],
+    chords: [[43, 50, 55, 62, 67], [36, 43, 48, 55, 64], [45, 52, 57, 64, 69], [38, 45, 50, 57, 62]],
+  },
   jp: {
     bpm: 66, gain: 0.5, density: 0.42,
     melody: [62, 63, 67, 69, 70, 74, 75, 79, 81, 82],

@@ -287,9 +287,22 @@ export class ShopGame {
     if (useRec) { this.sound.shopMusic(null); this.sound.playRecording(rec); } else { this.sound.stopRecording(); this.sound.shopMusic(this.shop?.music); }
     const chip = $('.music-chip', this.root);
     if (!chip) return;
-    chip.innerHTML = useRec
-      ? `🎵 <b>${esc(rec.title)}</b> <small>${esc(rec.what)} · ${esc(rec.by)} · <a href="${rec.page}" target="_blank" rel="noopener">${esc(rec.license)}</a></small> <button data-mswap title="Switch to the generated lo-fi">⇄</button>`
-      : `🎵 <b>Generated lo-fi</b> <small>composed live in a traditional scale</small>${rec ? ' <button data-mswap title="Switch to the recording">⇄</button>' : ''}`;
+    chip.innerHTML = `<span class="mc-icon" title="Music">🎵</span><span class="mc-body">${useRec
+      ? `<b>${esc(rec.title)}</b> <small>${esc(rec.what)} · ${esc(rec.by)} · <a href="${rec.page}" target="_blank" rel="noopener">${esc(rec.license)}</a></small> <button data-mswap title="Switch to the generated lo-fi">⇄</button>`
+      : `<b>Generated lo-fi</b> <small>composed live in a traditional scale</small>${rec ? ' <button data-mswap title="Switch to the recording">⇄</button>' : ''}`}</span>`;
+    // Show the credit for a few seconds, then shrink to a 🎵 button (tap to see it again).
+    chip.classList.remove('mini');
+    clearTimeout(this.chipTimer);
+    this.chipTimer = setTimeout(() => chip.classList.add('mini'), 5000);
+    if (!chip.dataset.bound) {
+      chip.dataset.bound = '1';
+      chip.addEventListener('click', (e) => {
+        if (e.target.closest('a, button')) return;
+        chip.classList.toggle('mini');
+        clearTimeout(this.chipTimer);
+        if (!chip.classList.contains('mini')) this.chipTimer = setTimeout(() => chip.classList.add('mini'), 6000);
+      });
+    }
     chip.querySelector('[data-mswap]')?.addEventListener('click', () => {
       store.set('music-mode', useRec ? 'generated' : 'recording');
       this.sound.click();
@@ -311,7 +324,7 @@ export class ShopGame {
       <div class="world">
         <div class="world-canvas"></div>
         <div class="world-hud">
-          <span class="hud-pill">📖 <b class="w-found">${this.found.size}</b>/${total} words</span>
+          <span class="hud-pill">📖 <b class="w-found">${this.found.size}</b>/${total}<span class="hud-long"> words</span></span>
           <span class="hud-pill hud-weather">${W.weather}</span>
         </div>
         <button class="shop-x" data-close aria-label="Close">✕</button>
@@ -319,7 +332,7 @@ export class ShopGame {
         <div class="world-toast" hidden></div>
         <div class="music-chip"></div>
         <div class="joy" aria-label="Move"><i></i></div>
-        <div class="world-hint"><span class="only-mouse">WASD / arrows to walk · Shift to run · drag to look</span><span class="only-touch">Joystick to walk · drag to look</span> · <button class="link-btn" data-skip>Skip into the shop ▶</button></div>
+        <div class="world-hint"><span class="hint-how"><span class="only-mouse">WASD / arrows to walk · Shift to run · drag to look</span><span class="only-touch">Joystick to walk · drag to look</span> · </span><button class="link-btn" data-skip>Skip into the shop ▶</button></div>
         <div class="world-title ${spawn === 'start' ? '' : 'gone'}">
           <div class="wt-inner">
             <div class="wt-jp">${esc(W.title)}</div>
@@ -383,7 +396,7 @@ export class ShopGame {
       <div class="world interior">
         <div class="world-canvas"></div>
         <div class="world-hud">
-          <span class="hud-pill">📖 <b class="w-found">${this.shopFound.size}</b>/${total} shop words</span>
+          <span class="hud-pill">📖 <b class="w-found">${this.shopFound.size}</b>/${total}<span class="hud-long"> shop words</span></span>
           <span class="hud-pill">🧺 <b class="w-basket">0</b> · <b class="w-total">${shop.till.short(0)}</b></span>
         </div>
         <button class="shop-x" data-close aria-label="Close">✕</button>
@@ -393,7 +406,7 @@ export class ShopGame {
         <div class="world-toast" hidden></div>
         <div class="music-chip"></div>
         <div class="joy" aria-label="Move"><i></i></div>
-        <div class="world-hint"><span class="only-mouse">Walk to a shelf · <kbd>E</kbd> take · <kbd>Q</kbd> put back</span><span class="only-touch">Walk to a shelf and tap Take</span> · <button class="link-btn" data-night>${W.shift}</button></div>
+        <div class="world-hint"><span class="hint-how"><span class="only-mouse">Walk to a shelf · <kbd>E</kbd> take · <kbd>Q</kbd> put back</span><span class="only-touch">Walk to a shelf and tap Take</span> · </span><button class="link-btn" data-night>${W.shift}</button></div>
       </div>`);
     const wrap = $('.world', this.root);
     this.#renderList();
@@ -418,6 +431,7 @@ export class ShopGame {
     $('[data-night]', wrap).addEventListener('click', () => { this.#closeWorld(); this.startNight(); });
     $('.shop-list', wrap).addEventListener('click', (e) => {
       if (e.target.closest('[data-en]')) $('.shop-list', wrap).classList.toggle('show-en');
+      else if (e.target.closest('[data-fold]')) { this.sound.click(); $('.shop-list', wrap).classList.toggle('folded'); }
     });
     this.#bindJoystick($('.joy', wrap));
     this.#cardLoop(wrap);
@@ -427,7 +441,8 @@ export class ShopGame {
   #clerkSays(jp, romaji, en) {
     const toast = $('.world-toast', this.root);
     if (!toast) return;
-    toast.innerHTML = `🗣️ Clerk: <b class="jp">${esc(jp)}</b> <span>${esc(romaji)}</span> = ${esc(en)}`;
+    toast.innerHTML = `🗣️ <b class="jp">${esc(jp)}</b> <span>${esc(romaji)}</span> <i>${esc(en)}</i>`;
+    this.toastUntil = performance.now() + 3300;
     toast.hidden = false;
     toast.classList.remove('show');
     void toast.offsetWidth;
@@ -437,7 +452,8 @@ export class ShopGame {
   #renderList() {
     const el = $('.shop-list', this.root);
     if (!el) return;
-    el.innerHTML = `<div class="sl-head">📝 ${esc(this.shop.world.listTitle)} <small>Mum's list</small><button class="sl-en" data-en title="Show meanings">EN</button></div>
+    const doneN = this.list.filter((l) => (this.basket.get(l.item) ?? 0) === l.q).length;
+    el.innerHTML = `<div class="sl-head" data-fold title="Fold / unfold the list">📝 ${esc(this.shop.world.listTitle)} <small class="sl-sub">Mum's list</small><span class="sl-sum">${doneN}/${this.list.length}</span><button class="sl-en" data-en title="Show readings and meanings">?</button></div>
       ${this.list.map((l) => {
         const it = this.shop.items[l.item];
         const got = this.basket.get(l.item) ?? 0;
@@ -552,14 +568,8 @@ export class ShopGame {
     store.set(`${key}-${this.shop.id}`, [...(key === 'words' ? this.found : this.shopFound)]);
     const el = $('.w-found', this.root);
     if (el) el.textContent = n;
-    const toast = $('.world-toast', this.root);
-    if (toast) {
-      toast.innerHTML = `📖 New word! <b class="jp">${esc(r.jp)}</b> <span>${esc(r.romaji)}</span> = ${esc(r.en)}`;
-      toast.hidden = false;
-      toast.classList.remove('show');
-      void toast.offsetWidth;
-      toast.classList.add('show');
-    }
+    // The word card itself announces it (✨ New word!), so no extra toast.
+    this.newWord = { id: r.id, until: performance.now() + 4500 };
     this.sound.toggle(true, n % 5);
     if (n === total) { this.sound.cheer(); this.onWords?.(this.shop.id); }
   }
@@ -568,29 +578,43 @@ export class ShopGame {
   #cardLoop(wrap) {
     const card = $('.read-card', wrap);
     let shown = null;
+    // After a few seconds the how-to text steps aside; only the action link stays.
+    setTimeout(() => $('.world-hint', wrap)?.classList.add('quiet'), 7000);
+    card.addEventListener('click', (e) => { if (!e.target.closest('.say')) card.classList.toggle('open'); });
     const tick = () => {
       const rc = this.world?.readCard;
       if (!rc || !rc.visible) {
         card.hidden = true;
         shown = null;
       } else {
+        const isNew = this.newWord?.id === rc.r.id && performance.now() < this.newWord.until;
         if (shown !== rc.r.id) {
           shown = rc.r.id;
-          card.innerHTML = `<b class="jp">${esc(rc.r.jp)}</b><span class="rom">${esc(rc.r.romaji)}</span><span class="en">${esc(rc.r.en)}</span><p>${esc(rc.r.note)}</p><button class="say" aria-label="Hear it">🔊</button>`;
+          card.classList.remove('open');
+          card.innerHTML = `<span class="rc-new">✨ New word!</span><b class="jp">${esc(rc.r.jp)}</b><span class="rom">${esc(rc.r.romaji)}</span><span class="en">${esc(rc.r.en)}</span><p>${esc(rc.r.note)}</p><button class="say" aria-label="Hear it">🔊</button>`;
           card.querySelector('.say').addEventListener('click', () => this.#sayJa(rc.r.jp));
         }
-        card.hidden = false;
+        card.classList.toggle('is-new', isNew);
+        // Phones: dock the card top-right instead of floating it over the scene,
+        // and step aside while the clerk is speaking.
         const W = wrap.clientWidth;
-        let x = Math.min(Math.max(rc.x, 140), W - 140);
-        const y = Math.max(rc.y, 120);
-        // Don't cover Mum's list: slide the card to the right of it.
-        const list = wrap.querySelector('.shop-list');
-        if (list) {
-          const lr = list.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
-          const right = lr.right - wr.left, bottom = lr.bottom - wr.top;
-          if (x - 125 < right && y - 170 < bottom) x = Math.min(right + 135, W - 130);
+        const docked = W < 700;
+        card.classList.toggle('docked', docked);
+        card.hidden = docked && performance.now() < (this.toastUntil ?? 0);
+        if (docked) {
+          card.style.transform = '';
+        } else {
+          let x = Math.min(Math.max(rc.x, 140), W - 140);
+          const y = Math.max(rc.y, 120);
+          // Don't cover Mum's list: slide the card to the right of it.
+          const list = wrap.querySelector('.shop-list');
+          if (list) {
+            const lr = list.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+            const right = lr.right - wr.left, bottom = lr.bottom - wr.top;
+            if (x - 125 < right && y - 170 < bottom) x = Math.min(right + 135, W - 130);
+          }
+          card.style.transform = `translate(${x}px, ${y}px) translate(-50%, -105%)`;
         }
-        card.style.transform = `translate(${x}px, ${y}px) translate(-50%, -105%)`;
       }
       this.cardRaf = requestAnimationFrame(tick);
     };

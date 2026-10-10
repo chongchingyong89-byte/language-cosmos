@@ -1,14 +1,13 @@
 // World Shops: one shop per country, each teaching its own language habits.
-// Phase 1 is playable; later phases show as "coming soon" with what they'll teach.
+// Ready shops are playable; later phases show as "coming soon" with what they'll teach.
 import { JAPAN } from './japan.js';
 import { MALAYSIA } from './malaysia.js';
+import { CHINA } from './china.js';
 
 export const SHOPS = [
   { ...JAPAN, phase: 1, ready: true },
   { ...MALAYSIA, phase: 2, ready: true },
-  { id: 'cn', flag: '🇨🇳', country: 'China', name: 'Corner Shop', native: '小卖部', phase: 2,
-    teaches: 'Measure words (个, 瓶, 张), tones in prices, paying by phone',
-    snacks: [{ emoji: '🥟', native: '包子' }, { emoji: '🍢', native: '糖葫芦' }, { emoji: '🌻', native: '瓜子' }, { emoji: '🌶️', native: '辣条' }] },
+  { ...CHINA, phase: 3, ready: true },
   { id: 'kr', flag: '🇰🇷', country: 'Korea', name: 'Convenience Store', native: '편의점', phase: 3,
     teaches: 'Speech levels (-요 vs plain), two number systems, "nunchi" moments',
     snacks: [{ emoji: '🍙', native: '삼각김밥' }, { emoji: '🍢', native: '떡볶이' }, { emoji: '🍌', native: '바나나우유' }, { emoji: '🍜', native: '컵라면' }] },

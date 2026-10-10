@@ -118,6 +118,7 @@ export const BADGES = [
   { id: 'konbini',  emoji: '🏪', name: 'Konbini Clerk',      desc: 'Finished a night shift in Japan' },
   { id: 'streetwords', emoji: '📖', name: 'Street Reader',   desc: 'Found every word on the rainy Tokyo street' },
   { id: 'mamak',    emoji: '🧋', name: 'Mamak Master',       desc: 'Finished an evening shift in Malaysia' },
+  { id: 'xiaomaibu', emoji: '🥟', name: '小卖部 Helper',      desc: 'Finished a summer-storm shift in China' },
   { id: 'shopper',  emoji: '🧺', name: 'Perfect Shopper',    desc: 'Bought exactly what was on Mum\'s list' },
   { id: 'pittari',  emoji: '🎯', name: 'Pittari!',           desc: 'Paid the exact amount at the till' },
   { id: 'konbini3', emoji: '🌟', name: 'Star Clerk',         desc: 'Got ★★★ on a konbini night shift' },

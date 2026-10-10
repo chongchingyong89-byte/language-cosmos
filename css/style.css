@@ -903,3 +903,60 @@ body:not(.lens-on) .core-label .lens { display: none; }
 @media (max-width: 980px), (max-height: 520px) { .music-chip { left: 12px; right: auto; bottom: auto; top: calc(var(--safe-t) + 84px); max-width: 60vw; } .world.interior .music-chip { top: auto; bottom: calc(var(--safe-b) + 14px); left: auto; right: 12px; } }
 
 .shop-frame > .music-chip.night-chip { position: fixed; right: 12px; bottom: calc(var(--safe-b) + 12px); top: auto; left: auto; }
+
+/* ── World overlays: less crowding (all sizes, then phones) ─────────────── */
+.zone-prompt { width: max-content; max-width: calc(100% - 24px); }
+.zone-prompt .zp-label b { white-space: nowrap; }
+.zone-prompt .zp-label small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
+.world-hint.quiet .hint-how { display: none; }
+.world-toast { white-space: normal; width: max-content; max-width: min(560px, calc(100% - 24px)); text-align: center; border-radius: 16px; }
+.world-toast i { font-style: normal; opacity: .75; }
+.read-card { cursor: pointer; }
+.read-card .rc-new { display: none; position: absolute; top: -11px; left: 50%; transform: translateX(-50%); padding: 2px 10px; border-radius: 999px;
+  background: linear-gradient(135deg, #ffd27a, #ffb547); color: #1d1405; font-size: 11.5px; font-weight: 800; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+.read-card.is-new .rc-new { display: block; }
+.read-card.is-new { box-shadow: 0 0 0 3px #ffc65c, 0 12px 40px rgba(0,0,0,0.45); }
+.read-card p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.read-card.open p { -webkit-line-clamp: unset; }
+.shop-list .sl-text small { display: none; }
+.shop-list.show-en .sl-text small { display: block; }
+.sl-head { cursor: pointer; -webkit-user-select: none; user-select: none; }
+.sl-sum { margin-left: auto; font-size: 12px; font-weight: 800; color: #1f9e6e; font-family: var(--font); }
+.sl-sum + .sl-en { margin-left: 4px; }
+.shop-list.folded { width: auto; }
+.shop-list.folded .sl-line, .shop-list.folded .sl-sub, .shop-list.folded .sl-en { display: none; }
+.shop-list.folded .sl-head { margin: 0; }
+.music-chip { cursor: pointer; display: flex; align-items: flex-start; gap: 6px; }
+.music-chip .mc-icon { flex: none; }
+.music-chip.mini { padding: 0; width: 34px; height: 34px; border-radius: 50%; justify-content: center; align-items: center; }
+.music-chip.mini .mc-body { display: none; }
+
+@media (max-width: 700px) {
+  .hud-long { display: none; }
+  .world-hud .hud-pill { font-size: 12px; padding: 3px 9px; }
+  /* Mum's list: top-left, half width, one line per item */
+  .shop-list { width: auto; max-width: calc(50% - 16px); padding: 6px 9px; top: calc(var(--safe-t) + 46px); left: 8px; }
+  .sl-head { font-size: 12.5px; gap: 4px; white-space: nowrap; }
+  .sl-head .sl-sub { display: none; }
+  .sl-line { grid-template-columns: 16px 1fr auto; gap: 4px; padding: 2px 0; }
+  .sl-text b { font-size: 14px; }
+  .sl-got { font-size: 11px; }
+  /* The word card docks top-right instead of floating over the scene */
+  .read-card.docked { left: auto; right: 8px; top: calc(var(--safe-t) + 46px); width: min(calc(50% - 12px), 230px); padding: 8px 10px 9px; transform: none !important; }
+  .read-card.docked::after { display: none; }
+  .read-card.docked .jp { font-size: 17px; line-height: 1.2; padding: 0 18px; }
+  .read-card.docked .rom, .read-card.docked .en { font-size: 12.5px; }
+  .read-card.docked p { font-size: 11.5px; }
+  .read-card.docked .say { width: 26px; height: 26px; top: 6px; right: 6px; font-size: 12px; }
+  /* Take / Put back: one compact row above the joystick */
+  .zone-prompt { bottom: calc(var(--safe-b) + 180px); padding: 8px 10px; gap: 6px; border-radius: 16px; }
+  .zone-prompt .zp-label b { font-size: 16px; }
+  .zone-prompt .zp-label i { font-size: 22px; }
+  .zone-prompt .zp-label small { font-size: 11px; max-width: 46vw; }
+  .zone-prompt .kid-btn { padding: 8px 14px; font-size: 14px; }
+  .world-toast { top: auto; bottom: calc(var(--safe-b) + 292px); width: max-content; font-size: 13px; padding: 7px 12px; }
+  .world-toast .jp { font-size: 15px; }
+  .world-hint { font-size: 11.5px; padding: 5px 12px; max-width: calc(100% - 24px); white-space: normal; text-align: center; }
+  .world-hint.quiet { left: auto; right: 56px; transform: none; }
+  .world .music-chip, .world.interior .music-chip { top: auto; left: auto; right: 10px; bottom: calc(var(--safe-b) + 46px); max-width: 55%; }
+}
