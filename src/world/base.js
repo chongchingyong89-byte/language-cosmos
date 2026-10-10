@@ -167,7 +167,7 @@ export class World3D {
       const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
       const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
       const dir = fwd.multiplyScalar(iy).add(right.multiplyScalar(ix)).normalize();
-      speed = (k.has('shift') || mag > 0.95 ? this.runSpeed ?? 3.6 : this.walkSpeed ?? 2.1) * mag;
+      speed = (k.has('shift') || mag > 0.97 ? this.runSpeed ?? 3.3 : this.walkSpeed ?? 1.55) * mag;
       // Try the full step, else slide along whichever axis is free.
       const p = hero.position, want = p.clone().addScaledVector(dir, speed * dt);
       const next = this.constrain(want, p)

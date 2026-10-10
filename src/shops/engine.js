@@ -7,6 +7,7 @@ import { Rain } from './rain.js';
 import { StreetWorld, READABLES } from '../world/street.js';
 import { InteriorWorld, SHOP_WORDS } from '../world/interior.js';
 import { Checkout } from './checkout.js';
+import { RECORDINGS } from './music.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -48,6 +49,7 @@ export class ShopGame {
     this.#closeWorld();
     this.onClose?.();
     this.sound.shopMusic(null);
+    this.sound.stopRecording();
     this.rain?.destroy();
     this.rain = null;
     this.sound.setRain(0);
@@ -133,6 +135,7 @@ export class ShopGame {
   // ── A night at the counter ───────────────────────────────────────────────
   async startNight() {
     const shop = this.shop;
+    this.sound.stopRecording();
     const run = (this.run = { customers: shop.night(), stars: 0, total: 0, yen: 0, learned: new Map(), attitudes: new Map(), happy: 0, mood: 3 });
     this.#show(`
       <div class="shop-stage">${shop.scene()}<canvas class="shop-rain"></canvas>
@@ -275,6 +278,25 @@ export class ShopGame {
     });
   }
 
+  // ── Music: a real recording (default) or the generated lo-fi ────────────
+  #music(scene) {
+    const rec = RECORDINGS[this.shop?.id]?.[scene];
+    const useRec = rec && store.get('music-mode', 'recording') === 'recording';
+    if (useRec) { this.sound.shopMusic(null); this.sound.playRecording(rec); } else { this.sound.stopRecording(); this.sound.shopMusic(this.shop?.music); }
+    const chip = $('.music-chip', this.root);
+    if (!chip) return;
+    chip.innerHTML = useRec
+      ? `🎵 <b>${esc(rec.title)}</b> <small>${esc(rec.what)} · ${esc(rec.by)} · <a href="${rec.page}" target="_blank" rel="noopener">${esc(rec.license)}</a></small> <button data-mswap title="Switch to the generated lo-fi">⇄</button>`
+      : `🎵 <b>Generated lo-fi</b> <small>composed live in a traditional scale</small>${rec ? ' <button data-mswap title="Switch to the recording">⇄</button>' : ''}`;
+    chip.querySelector('[data-mswap]')?.addEventListener('click', () => {
+      store.set('music-mode', useRec ? 'generated' : 'recording');
+      this.sound.click();
+      this.#music(scene);
+    });
+    // Browsers may block the first play: retry on the next tap anywhere.
+    this.root.addEventListener('pointerup', () => this.sound.resumeRecording(), { once: true });
+  }
+
   // ── The walkable 3D street ───────────────────────────────────────────────
   openWorld(shop, { spawn = 'start' } = {}) {
     this.sound.click();
@@ -292,6 +314,7 @@ export class ShopGame {
         <button class="shop-x" data-close aria-label="Close">✕</button>
         <div class="read-card" hidden></div>
         <div class="world-toast" hidden></div>
+        <div class="music-chip"></div>
         <div class="joy" aria-label="Move"><i></i></div>
         <div class="world-hint"><span class="only-mouse">WASD / arrows to walk · Shift to run · drag to look</span><span class="only-touch">Joystick to walk · drag to look</span> · <button class="link-btn" data-skip>Skip into the shop ▶</button></div>
         <div class="world-title ${spawn === 'start' ? '' : 'gone'}">
@@ -320,7 +343,7 @@ export class ShopGame {
     this.world.start();
     window.__world = this.world; // handy for debugging from the console
     this.sound.setRain(0.85);
-    this.sound.shopMusic(shop.music);
+    this.#music('street');
     $('[data-go]', wrap).addEventListener('click', () => { this.sound.click(); $('.world-title', wrap).classList.add('gone'); });
     $('[data-skip]', wrap).addEventListener('click', () => this.#enterShop());
     this.#bindJoystick($('.joy', wrap));
@@ -364,6 +387,7 @@ export class ShopGame {
         <div class="zone-prompt" hidden></div>
         <div class="read-card" hidden></div>
         <div class="world-toast" hidden></div>
+        <div class="music-chip"></div>
         <div class="joy" aria-label="Move"><i></i></div>
         <div class="world-hint"><span class="only-mouse">Walk to a shelf · <kbd>E</kbd> take · <kbd>Q</kbd> put back</span><span class="only-touch">Walk to a shelf and tap Take</span> · <button class="link-btn" data-night>👔 Work the night shift</button></div>
       </div>`);
@@ -385,6 +409,7 @@ export class ShopGame {
     window.__world = this.world;
     this.sound.setRain(0.25); // the rain, muffled through the glass
     this.sound.chime();
+    this.#music('shop');
     $('[data-night]', wrap).addEventListener('click', () => { this.#closeWorld(); this.startNight(); });
     $('.shop-list', wrap).addEventListener('click', (e) => {
       if (e.target.closest('[data-en]')) $('.shop-list', wrap).classList.toggle('show-en');

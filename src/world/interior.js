@@ -65,8 +65,8 @@ export class InteriorWorld extends World3D {
     this.onZone = onZone;
     this.onExit = onExit;
     this.readRange = 2.2;
-    this.walkSpeed = 1.8;
-    this.runSpeed = 3.0;
+    this.walkSpeed = 1.3;
+    this.runSpeed = 2.6;
     this.zone = null;
     this.#build();
     this.spawnHero(new THREE.Vector3(DOOR.x, 0, 3.0), Math.PI, { umbrella: false }); // left in the stand outside

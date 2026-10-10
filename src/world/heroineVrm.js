@@ -88,6 +88,17 @@ export class VrmHeroine {
 
   smile(seconds = 1.6) { this.smileT = seconds; }
 
+  #curl(side, amount) {
+    const sign = side === 'left' ? -1 : 1;
+    for (const finger of ['Index', 'Middle', 'Ring', 'Little']) {
+      const spread = finger === 'Little' ? 1.15 : finger === 'Index' ? 0.85 : 1;
+      this.bone(`${side}${finger}Proximal`)?.rotation.set(0, 0, sign * amount * spread);
+      this.bone(`${side}${finger}Intermediate`)?.rotation.set(0, 0, sign * amount * 1.2 * spread);
+      this.bone(`${side}${finger}Distal`)?.rotation.set(0, 0, sign * amount * 0.8 * spread);
+    }
+    this.bone(`${side}ThumbProximal`)?.rotation.set(0, sign * -amount * 0.4, 0);
+  }
+
   // Umbrella open (outside, in the rain) or put away (inside the shop).
   setUmbrella(open) {
     this.umbrellaOpen = open;
@@ -109,40 +120,73 @@ export class VrmHeroine {
     this.settle();
   }
 
-  // speed: 0 idle, ~2 walk, ~3.6 run. Returns true on each footfall.
+  // A human gait cycle driven by one phase φ (left leg; right = φ + π).
+  // Heel strike at φ = π/2, toe-off near φ = −π/2. Walk and run blend by speed.
+  // speed in m/s: 0 idle, ~1.5 walk, ~3.3 run. Returns true on each footfall.
   update(dt, speed) {
-    this.speed += (speed - this.speed) * Math.min(dt * 8, 1);
+    this.speed += (speed - this.speed) * Math.min(dt * 6, 1);
     const s = this.speed;
-    const prev = Math.sin(this.phase);
-    this.phase += dt * (s > 0.1 ? 4 + s * 1.6 : 0);
-    const sw = Math.sin(this.phase);
-    const amp = Math.min(s / 2.2, 1.3);
+    const w = Math.min(s / 1.5, 1);                    // walk weight
+    const r = Math.min(Math.max((s - 2.0) / 1.2, 0), 1); // run weight
+    const stride = 1.45 + r * 0.95;                    // metres per full cycle
+    const prevStep = Math.floor((this.phase - Math.PI / 2) / Math.PI);
+    if (s > 0.05) this.phase += dt * (s / stride) * Math.PI * 2;
+    const f = this.phase;
     const t = performance.now() / 1000;
     const B = this.bone;
+    const pos = (x) => Math.max(0, x);
 
-    // Legs
-    B('leftUpperLeg').rotation.x = -sw * 0.5 * amp;
-    B('rightUpperLeg').rotation.x = sw * 0.5 * amp;
-    B('leftLowerLeg').rotation.x = Math.max(0, sw) * 0.75 * amp;
-    B('rightLowerLeg').rotation.x = Math.max(0, -sw) * 0.75 * amp;
-    // Body: bob, slight lean when running, idle breathing
-    B('hips').position.y = this.hipsY + Math.abs(Math.cos(this.phase)) * 0.025 * Math.min(s, 1.5) + (s < 0.1 ? Math.sin(t * 2) * 0.004 : 0);
-    B('spine').rotation.x = s * 0.04 + Math.sin(t * 2) * 0.01;
-    B('spine').rotation.y = sw * 0.08 * amp;
-    B('neck').rotation.y = -sw * 0.05 * amp;
-    // Left arm relaxed at her side, swinging; right arm holds the umbrella in front.
-    B('leftUpperArm').rotation.set(sw * 0.35 * amp, 0, -1.2);
-    B('leftLowerArm').rotation.set(0, 0.25 + Math.max(0, -sw) * 0.25 * amp, 0);
+    const thigh = 0.38 * w + 0.1 * r;
+    const kneeSwing = 0.9 * w + 0.6 * r;
+    const leg = (side, ph) => {
+      // Thigh: forward (−x) at heel strike, back at toe-off.
+      B(`${side}UpperLeg`).rotation.set(-thigh * Math.sin(ph) - 0.05 * r, 0, 0);
+      // Knee: big bend in early swing, small cushioning bend after heel strike.
+      const swingBend = kneeSwing * pos(Math.cos(ph + 0.55)) ** 2;
+      const loadBend = 0.18 * w * pos(Math.cos(ph - Math.PI / 2 - 0.45)) ** 8;
+      B(`${side}LowerLeg`).rotation.set(swingBend + loadBend + 0.04 * w + 0.25 * r, 0, 0);
+      // Foot: toe up at heel strike, push off with the toes before lifting.
+      const pushOff = 0.35 * w * pos(-Math.sin(ph - 0.35)) ** 3;
+      const heel = -0.22 * w * pos(Math.sin(ph)) ** 4;
+      B(`${side}Foot`)?.rotation.set(pushOff + heel - swingBend * 0.25, 0, 0);
+    };
+    leg('left', f);
+    leg('right', f + Math.PI);
+
+    // Pelvis: dips at each heel strike, sways over the standing leg, twists.
+    const hips = B('hips');
+    hips.position.y = this.hipsY - (0.022 * w + 0.03 * r) * (1 - Math.cos(2 * f)) / 2 + (s < 0.05 ? Math.sin(t * 2) * 0.003 : 0);
+    hips.position.x = -0.018 * w * Math.cos(f) + (s < 0.05 ? Math.sin(t * 0.7) * 0.008 : 0);
+    const twist = (0.09 * w + 0.04 * r) * Math.sin(f);
+    hips.rotation.set(0, -twist, 0.03 * w * Math.sin(2 * f));
+    // Spine counter-twists; head stays level and looks where she's going.
+    B('spine').rotation.set(0.03 * w + 0.16 * r + Math.sin(t * 2) * 0.008, twist * 0.9, 0);
+    B('chest')?.rotation.set(0.02 * r, twist * 0.4, 0);
+    B('neck').rotation.set(-0.04 * r, -twist * 1.1, 0);
+    B('head').rotation.set(-0.02 * r, 0, Math.sin(t * 0.9) * 0.015 * (1 - w));
+
+    // Arms swing opposite to the legs; elbows bend more on the forward swing
+    // (a lot more when running).
+    // (Elbow bend axis is mirrored between arms: left bends forward with −y.)
+    const swing = 0.28 * w + 0.12 * r;
+    const elbow = 0.15 + 1.2 * r;
+    B('leftUpperArm').rotation.set(swing * Math.sin(f), 0, -1.25 + 0.12 * r);
+    B('leftLowerArm').rotation.set(0, -(elbow + 0.3 * w * pos(-Math.sin(f))), 0);
+    B('leftHand')?.rotation.set(0, 0, 0.1);
     if (this.umbrellaOpen !== false) {
       B('rightUpperArm').rotation.set(0, 0.55, 1.12);
       B('rightLowerArm').rotation.set(0, 1.75, 0);
       B('rightHand').rotation.set(0, 0, -0.3);
     } else {
-      // No umbrella: both arms relaxed and swinging
-      B('rightUpperArm').rotation.set(-sw * 0.35 * amp, 0, 1.2);
-      B('rightLowerArm').rotation.set(0, -0.25 - Math.max(0, sw) * 0.25 * amp, 0);
-      B('rightHand').rotation.set(0, 0, 0);
+      B('rightUpperArm').rotation.set(-swing * Math.sin(f), 0, 1.25 - 0.12 * r);
+      B('rightLowerArm').rotation.set(0, elbow + 0.3 * w * pos(Math.sin(f)), 0);
+      B('rightHand').rotation.set(0, 0, -0.1);
     }
+
+    // Fingers: relaxed curl, or a firm grip on the umbrella handle.
+    // (Left fingers curl with −z, right with +z.)
+    this.#curl('left', 0.45);
+    this.#curl('right', this.umbrellaOpen !== false ? 1.15 : 0.45);
 
     // Face: blink every few seconds; smile when she finds a word.
     const em = this.vrm.expressionManager;
@@ -175,6 +219,6 @@ export class VrmHeroine {
     this.umbrella.children[0].position.y = len / 2;
     this.umbrella.children[2].position.y = this.umbrella.children[3].position.y = len;
 
-    return s > 0.3 && Math.sign(prev) !== Math.sign(sw);
+    return s > 0.3 && Math.floor((this.phase - Math.PI / 2) / Math.PI) !== prevStep;
   }
 }

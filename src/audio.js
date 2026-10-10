@@ -247,6 +247,35 @@ export class SoundScape {
     src.stop(t + 3);
   }
 
+  // A streamed recording (looped), routed through the master volume/mute.
+  playRecording(rec) {
+    if (this.recording?.src === rec?.src) return;
+    this.stopRecording();
+    if (!rec) return;
+    if (!this.ctx) this.#build();
+    const el = new Audio();
+    el.crossOrigin = 'anonymous';
+    el.src = rec.src;
+    el.loop = true;
+    const node = this.ctx.createMediaElementSource(el);
+    const g = this.ctx.createGain();
+    g.gain.value = 0;
+    node.connect(g).connect(this.master);
+    g.gain.setTargetAtTime(0.55, this.ctx.currentTime + 0.2, 1.2);
+    el.play().catch(() => {}); // starts on the next tap if the browser blocks autoplay
+    this.recording = { src: rec.src, el, g, node };
+  }
+
+  stopRecording() {
+    const r = this.recording;
+    if (!r) return;
+    this.recording = null;
+    r.g.gain.setTargetAtTime(0, this.ctx.currentTime, 0.3);
+    setTimeout(() => { r.el.pause(); r.el.src = ''; r.node.disconnect(); r.g.disconnect(); }, 1500);
+  }
+
+  resumeRecording() { this.recording?.el.paused && this.recording.el.play().catch(() => {}); }
+
   shopMusic(id) {
     this.music?.stop();
     this.music = null;
