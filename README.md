@@ -20,6 +20,8 @@ Deep links: `http://localhost:5173/#th` opens directly on Thai. Use any language
 
 Controls: drag to orbit, scroll to zoom, click a core or leaf. <kbd>Esc</kbd> returns to the overview, <kbd>/</kbd> searches, and Shift-click on a domain chip shows only that domain.
 
+**Sound** is generated live with the Web Audio API (no audio files): a gliding ambient pad, cosmic wind and star twinkles, plus pentatonic cues on every interaction. Each language rings its own note (bigger vocabulary → deeper), and each trait domain has its own bell. It starts on your first click; toggle it with <kbd>M</kbd> or the Sound switch, which is remembered per browser.
+
 ## Structure
 
 ```
@@ -29,6 +31,7 @@ src/
   main.js               entry: data sanity checks, boots Cosmos + UI
   cosmos.js             Three.js world: galaxy, cores, trees, bridges, picking, camera
   ui.js                 list, detail panel, legend filters, tooltip, study notes
+  audio.js              procedural soundscape: ambient pad, wind, twinkles, interaction cues
   data/
     taxonomy.js         8 trait domains, 5 evidence levels, families, galaxy order
     features.js         linguistic features → claimed effects (+ refs, how to test), bilingual bridges

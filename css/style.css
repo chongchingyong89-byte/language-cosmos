@@ -164,3 +164,5 @@ textarea#notes {
   #legend { top: 56px; bottom: auto; left: 16px; right: 16px; max-height: 30vh; overflow-y: auto; }
   .chip small { display: none; }
 }
+.controls input[type="range"] { width: 76px; accent-color: var(--accent); }
+.controls .sound { gap: 8px; }

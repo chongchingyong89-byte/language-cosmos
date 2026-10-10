@@ -1,5 +1,6 @@
 import { Cosmos } from './cosmos.js';
 import { UI } from './ui.js';
+import { SoundScape } from './audio.js';
 import { LANGUAGES, AGENCY } from './data/languages.js';
 import { FEATURES, BRIDGES } from './data/features.js';
 
@@ -15,7 +16,7 @@ for (const b of BRIDGES) {
 const data = { languages: LANGUAGES, features: FEATURES, bridges: BRIDGES, agency: AGENCY };
 try {
   const cosmos = new Cosmos(document.getElementById('scene'), data);
-  new UI(cosmos, data);
+  new UI(cosmos, data, new SoundScape());
   window.cosmos = cosmos; // handy for poking at it from the devtools console
 } catch (err) {
   console.error(err);

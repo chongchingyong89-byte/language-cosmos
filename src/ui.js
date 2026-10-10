@@ -14,14 +14,19 @@ function saveNotes(notes) {
   try { localStorage.setItem(NOTES_KEY, JSON.stringify(notes)); } catch { /* storage unavailable */ }
 }
 
+const CAT_IDS = Object.keys(CATEGORIES);
+
 const badge = (evId) => {
   const ev = EVIDENCE[evId] ?? EVIDENCE.speculative;
   return `<span class="badge" style="--c:${ev.color}" title="${esc(ev.desc)}">${ev.label}</span>`;
 };
 
 export class UI {
-  constructor(cosmos, { languages, features, bridges }) {
+  constructor(cosmos, { languages, features, bridges }, sound) {
     this.cosmos = cosmos;
+    this.sound = sound;
+    const lex = languages.map((l) => l.lexicon.n);
+    sound.setLexiconRange(Math.min(...lex), Math.max(...lex));
     this.languages = languages;
     this.features = features;
     this.bridges = bridges;
@@ -55,6 +60,9 @@ export class UI {
   select(data) {
     if (!data) return;
     this.#setHash(data.langId ?? '');
+    if (data.kind === 'core') this.sound.selectCore(this.byId.get(data.langId).lexicon.n);
+    else if (data.kind === 'leaf') this.sound.selectLeaf(CAT_IDS.indexOf(data.item.category), EVIDENCE[data.item.evidence]?.rank, data.item.type === 'concept');
+    else if (data.kind === 'bridge') this.sound.bridge();
     if (data.kind === 'core') {
       this.cosmos.focusLanguage(data.langId);
       this.showLanguage(data.langId);
@@ -113,26 +121,51 @@ export class UI {
       const btn = e.target.closest('[data-cat]');
       if (!btn) return;
       const set = new Set(this.cosmos.state.categories);
+      const idx = CAT_IDS.indexOf(btn.dataset.cat);
       if (e.shiftKey) { // solo this category
         set.clear(); set.add(btn.dataset.cat);
-      } else if (set.has(btn.dataset.cat)) set.delete(btn.dataset.cat); else set.add(btn.dataset.cat);
+        this.sound.sweep();
+      } else if (set.has(btn.dataset.cat)) {
+        set.delete(btn.dataset.cat);
+        this.sound.toggle(false, idx);
+      } else {
+        set.add(btn.dataset.cat);
+        this.sound.toggle(true, idx);
+      }
       for (const b of cats.querySelectorAll('[data-cat]')) b.classList.toggle('on', set.has(b.dataset.cat));
       this.cosmos.set({ categories: set });
     });
 
     const evSel = $('#ev-filter');
     evSel.innerHTML = Object.entries(EVIDENCE).map(([id, e]) => `<option value="${e.rank}">${e.label}${e.rank ? ' and stronger' : ' (show all)'}</option>`).join('');
-    evSel.addEventListener('change', () => this.cosmos.set({ minEvidence: Number(evSel.value) }));
+    evSel.addEventListener('change', () => {
+      this.sound.toggle(true, Number(evSel.value));
+      this.cosmos.set({ minEvidence: Number(evSel.value) });
+    });
 
-    $('#size-mode').addEventListener('change', (e) => this.cosmos.setSizeMode(e.target.value));
-    $('#toggle-trees').addEventListener('change', (e) => this.cosmos.set({ showAllTrees: e.target.checked }));
-    $('#toggle-bridges').addEventListener('change', (e) => this.cosmos.set({ showBridges: e.target.checked }));
-    $('#toggle-rotate').addEventListener('change', (e) => this.cosmos.setAutoRotate(e.target.checked));
+    $('#size-mode').addEventListener('change', (e) => { this.sound.sweep(); this.cosmos.setSizeMode(e.target.value); });
+    $('#toggle-trees').addEventListener('change', (e) => { this.sound.toggle(e.target.checked, 1); this.cosmos.set({ showAllTrees: e.target.checked }); });
+    $('#toggle-bridges').addEventListener('change', (e) => { this.sound.toggle(e.target.checked, 3); this.cosmos.set({ showBridges: e.target.checked }); });
+    $('#toggle-rotate').addEventListener('change', (e) => { this.sound.toggle(e.target.checked, 4); this.cosmos.setAutoRotate(e.target.checked); });
+    $('#sort').addEventListener('change', () => this.sound.click());
     $('#btn-overview').addEventListener('click', () => this.home());
-    $('#btn-export').addEventListener('click', () => this.#exportNotes());
+    $('#btn-export').addEventListener('click', () => { this.sound.click(); this.#exportNotes(); });
+
+    const soundBox = $('#toggle-sound'), vol = $('#volume');
+    soundBox.checked = this.sound.enabled;
+    vol.value = this.sound.volume;
+    soundBox.addEventListener('change', () => this.sound.setEnabled(soundBox.checked));
+    vol.addEventListener('input', () => this.sound.setVolume(Number(vol.value)));
+  }
+
+  toggleSound() {
+    const box = $('#toggle-sound');
+    box.checked = !box.checked;
+    this.sound.setEnabled(box.checked);
   }
 
   home() {
+    this.sound.overview();
     this.#setHash('');
     this.cosmos.overview();
     this.showIntro();
@@ -147,11 +180,15 @@ export class UI {
       }
       if (e.key === 'Escape') this.home();
       if (e.key === '/') { e.preventDefault(); $('#search').focus(); }
+      if (e.key === 'm' || e.key === 'M') this.toggleSound();
     });
   }
 
   // ── Tooltip ──────────────────────────────────────────────────────────────
   #tooltip(data, at) {
+    const key = data ? `${data.kind}:${data.langId ?? ''}:${data.item?.id ?? data.bridge?.title ?? ''}` : '';
+    if (key && key !== this.hoverKey) this.sound.hover(data.kind, [...key].reduce((h, c) => h + c.charCodeAt(0), 0));
+    this.hoverKey = key;
     const tip = $('#tooltip');
     if (!data || !at) { tip.hidden = true; return; }
     let html = '';
