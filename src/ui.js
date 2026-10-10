@@ -1,6 +1,7 @@
 // DOM side: language list, detail panel, legend/filters, tooltip and study notes.
 import { CATEGORIES, EVIDENCE, FAMILIES, TRAITS, STAGES } from './data/taxonomy.js';
 import { buildProfiles } from './profile.js';
+import { Explorer } from './kids/explorer.js';
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -17,7 +18,7 @@ function saveNotes(notes) {
 
 const CAT_IDS = Object.keys(CATEGORIES);
 // Keep in sync with the mobile breakpoints in style.css.
-const MOBILE_Q = matchMedia('(max-width: 760px), (max-height: 520px)');
+const MOBILE_Q = matchMedia('(max-width: 980px), (max-height: 520px)');
 const LANDSCAPE_Q = matchMedia('(max-height: 520px) and (orientation: landscape)');
 const PEEK_PX = 132;
 
@@ -58,6 +59,34 @@ function radarSvg(p, color) {
   </svg>`;
 }
 
+// Donut of leaf counts per trait domain, coloured like the 3D branches.
+function donutSvg(counts, total) {
+  const r = 34, C = 2 * Math.PI * r;
+  let off = 0;
+  const segs = Object.entries(counts).filter(([, n]) => n).map(([cat, n]) => {
+    const len = (n / total) * C;
+    const seg = `<circle r="${r}" cx="48" cy="48" fill="none" stroke="${CATEGORIES[cat].color}" stroke-width="13"
+      stroke-dasharray="${Math.max(len - 1.5, 0.5)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 48 48)"><title>${CATEGORIES[cat].label}: ${n}</title></circle>`;
+    off += len;
+    return seg;
+  }).join('');
+  return `<svg class="donut" viewBox="0 0 96 96">${segs}<text x="48" y="45" class="dn">${total}</text><text x="48" y="60" class="dl">leaves</text></svg>`;
+}
+
+// Tiny icons for the visual map key.
+const KEY = [
+  ['<circle cx="14" cy="14" r="7" fill="#9fc4ff"/><circle cx="14" cy="14" r="12" fill="#9fc4ff" opacity=".18"/>', 'Star size', 'vocabulary (volume ∝ dictionary words)'],
+  ['<circle cx="14" cy="14" r="11" fill="#ff8a5c" opacity=".35"/><circle cx="10" cy="12" r="3" fill="#ff8a5c"/><circle cx="18" cy="16" r="2.5" fill="#ff8a5c"/>', 'Colour & cloud', 'language family'],
+  ['<path d="M14 14 L24 4 M14 14 L24 24 M14 14 L4 6 M14 14 L5 23" stroke="#4fd1ff" stroke-width="1.6"/><path d="M14 14 L24 24" stroke="#ff7ac6" stroke-width="1.6"/><path d="M14 14 L4 6" stroke="#ffb547" stroke-width="1.6"/>', 'Branch direction', 'one of 8 trait domains'],
+  ['<circle cx="9" cy="14" r="3" fill="#6ee7a8"/><circle cx="20" cy="14" r="6" fill="#6ee7a8"/>', 'Leaf size', 'strength of evidence'],
+  ['<circle cx="14" cy="14" r="6" fill="none" stroke="#c9a7ff" stroke-dasharray="2 2"/>', 'Wireframe leaf', 'speculative: an idea to test'],
+  ['<path d="M14 6 L21 14 L14 22 L7 14Z" fill="#ffe066"/>', 'Diamond', 'culture-key word (面子, malu…)'],
+  ['<path d="M8 22 L14 4 L20 22Z" fill="#ff3b5c"/>', 'Red thorn', 'shadow side: a possible harm'],
+  ['<path d="M3 22 Q14 -2 25 22" fill="none" stroke="#ffd27a" stroke-width="1.6"/><circle cx="3" cy="22" r="2.5" fill="#ffd27a"/><circle cx="25" cy="22" r="2.5" fill="#ffd27a"/>', 'Golden arc', 'bilingual study: same person, two languages'],
+  ['<ellipse cx="14" cy="16" rx="11" ry="4" fill="none" stroke="#ffd9a8"/><circle cx="14" cy="14" r="4" fill="#ffd9a8"/>', '母语 core', 'the mother tongue, from birth'],
+];
+const keyHtml = () => `<div class="map-key">${KEY.map(([svg, t, d]) => `<div><svg viewBox="0 0 28 28">${svg}</svg><span><b>${t}</b> ${d}</span></div>`).join('')}</div>`;
+
 const tiltBar = (v) => {
   const w = Math.abs(v) * 50;
   return `<span class="tilt"><i class="${v >= 0 ? 'up' : 'down'}" style="left:${v >= 0 ? 50 : 50 - w}%;width:${w}%"></i></span>`;
@@ -88,6 +117,7 @@ export class UI {
     this.#buildLegend();
     this.#bindKeys();
     this.#initChrome();
+    this.explorer = new Explorer(this, { languages, timeline });
     this.showIntro();
 
     cosmos.on('hover', (data, at) => this.#tooltip(data, at));
@@ -117,6 +147,7 @@ export class UI {
 
   select(data) {
     if (!data) return;
+    this.explorer?.interrupt();
     this.#setHash(data.langId ?? (data.kind === 'origin' ? 'origin' : ''));
     this.closeOverlays();
     if (data.kind === 'origin') {
@@ -435,15 +466,27 @@ export class UI {
     for (const el of p.querySelectorAll('[data-origin]')) {
       el.addEventListener('click', () => this.select({ kind: 'origin' }));
     }
+    for (const el of p.querySelectorAll('[data-tour]')) {
+      el.addEventListener('click', () => this.explorer.startTour());
+    }
     this.#renderList();
   }
 
+  renderPanel(html, after) {
+    this.#panel(html);
+    after?.();
+  }
+
   showIntro() {
+    if (this.explorer?.active) return this.explorer.showIntro();
     const nLeaves = this.languages.reduce((s, l) => s + this.cosmos.itemsFor(l).length, 0);
     this.#panel(`
       <h2>Explore the language universe</h2>
       <p class="lead"><span class="only-mouse">Click a star · drag to orbit · scroll to zoom</span><span class="only-touch">Tap a star · drag to orbit · pinch to zoom</span></p>
       <button class="start-btn" data-origin>Start here: <b>母语 · how a mother tongue shapes you, from birth</b> →</button>
+      <button class="start-btn tour" data-tour>▶ <b>Guided tour</b>: 10 stops through the cosmos</button>
+      <h3>Map key</h3>
+      ${keyHtml()}
       <h3>How to read it</h3>
       <p>Each glowing <b>core</b> is a language. Its <b>volume</b> is proportional to its vocabulary (dictionary headwords), or to its speakers if you switch the size mode.
       Cores cluster by <b>family</b>, and the coloured nebula behind a cluster marks the family.</p>
@@ -466,6 +509,7 @@ export class UI {
   }
 
   showLanguage(id) {
+    if (this.explorer?.active) return this.explorer.showLanguage(id);
     const l = this.byId.get(id);
     const items = this.cosmos.itemsFor(l);
     const byCat = Object.keys(CATEGORIES).map((c) => [c, items.filter((i) => i.category === c)]).filter(([, a]) => a.length);
@@ -478,14 +522,7 @@ export class UI {
         <h2>${esc(l.name)}</h2>
         <div class="muted">${esc(fam?.label)} › ${esc(l.branch)}${l.region ? ` · ${esc(l.region)}` : ''}</div>
       </div>
-      <div class="stats">
-        <div><small>Vocabulary core</small><b>${fmt(l.lexicon.n)}</b><span class="muted">${esc(l.lexicon.source)}</span>${l.lexicon.verify ? '<span class="warn">rough figure, verify before citing</span>' : ''}</div>
-        <div><small>Speakers (L1+L2)</small><b>${fmtSpeakers(l.speakers)}</b></div>
-        <div><small>Word order</small><b>${esc(l.typology.order)}</b></div>
-        <div><small>Morphology</small><b>${esc(l.typology.morphology)}</b></div>
-        <div><small>Script</small><b>${esc(l.typology.script)}</b></div>
-        <div><small>Tone</small><b>${l.typology.tone ? 'Yes' : 'No'}</b></div>
-      </div>
+      ${this.#glance(l, items)}
       ${this.#personality(id, fam?.color ?? '#ffffff')}
       ${byCat.map(([c, arr]) => `
         <section class="branch" style="--c:${CATEGORIES[c].color}">
@@ -529,6 +566,7 @@ export class UI {
   }
 
   showItem(langId, item) {
+    if (this.explorer?.active) return this.explorer.showItem(langId, item);
     const l = this.byId.get(langId);
     const c = CATEGORIES[item.category];
     const shared = item.type === 'feature'
@@ -557,6 +595,7 @@ export class UI {
   }
 
   showBridge(b) {
+    if (this.explorer?.active) return this.explorer.showBridge(b);
     const A = this.byId.get(b.a), B = this.byId.get(b.b);
     const c = CATEGORIES[b.category];
     this.#panel(`
@@ -576,6 +615,45 @@ export class UI {
         <button class="chip on" data-lang="${B.id}" style="--c:${FAMILIES[B.family]?.color}"><i></i>${esc(B.name)}</button>
       </div>
     `);
+  }
+
+  // "At a glance" infographic: ranks, domain donut, evidence strip, life stages.
+  #glance(l, items) {
+    const N = this.languages.length;
+    const lexSorted = [...this.languages].sort((a, b) => b.lexicon.n - a.lexicon.n);
+    const spSorted = [...this.languages].sort((a, b) => b.speakers - a.speakers);
+    const lexW = (Math.cbrt(l.lexicon.n) / Math.cbrt(lexSorted[0].lexicon.n)) * 100;
+    const spW = (Math.log10(l.speakers * 1e6) / Math.log10(spSorted[0].speakers * 1e6)) * 100;
+    const counts = Object.fromEntries(Object.keys(CATEGORIES).map((c) => [c, items.filter((i) => i.category === c).length]));
+    const evOrder = ['strong', 'moderate', 'correlational', 'contested', 'speculative'];
+    const evCounts = evOrder.map((e) => [e, items.filter((i) => i.evidence === e).length]).filter(([, n]) => n);
+    const stageCounts = Object.keys(STAGES).map((s) => [s, items.filter((i) => i.stage === s).length]);
+    return `<section class="glance">
+      <div class="rank-bars">
+        <div class="rb">
+          <span class="rb-l">Vocabulary</span><b>${fmt(l.lexicon.n)}</b><small>#${lexSorted.indexOf(l) + 1} of ${N}</small>
+          <div class="bar"><i style="width:${lexW}%"></i></div>
+          <span class="rb-src">${esc(l.lexicon.source)}${l.lexicon.verify ? ' · <span class="warnc">rough, verify</span>' : ''}</span>
+        </div>
+        <div class="rb">
+          <span class="rb-l">Speakers</span><b>${fmtSpeakers(l.speakers)}</b><small>#${spSorted.indexOf(l) + 1} of ${N}</small>
+          <div class="bar sp"><i style="width:${spW}%"></i></div>
+          <span class="rb-src">L1 + L2, log scale</span>
+        </div>
+      </div>
+      <div class="typo">${[['Order', l.typology.order], ['Morphology', l.typology.morphology], ['Script', l.typology.script], ['Tone', l.typology.tone ? 'Tonal' : 'No tone']]
+        .map(([k, v]) => `<span><small>${k}</small>${esc(v)}</span>`).join('')}</div>
+      ${items.length ? `<div class="glance-row">
+        ${donutSvg(counts, items.length)}
+        <div class="glance-side">
+          <small>Evidence behind its leaves</small>
+          <div class="ev-strip">${evCounts.map(([e, n]) => `<i style="flex:${n};background:${EVIDENCE[e].color}" title="${EVIDENCE[e].label}: ${n}"></i>`).join('')}</div>
+          <div class="ev-legend">${evCounts.map(([e, n]) => `<span><i style="background:${EVIDENCE[e].color}"></i>${EVIDENCE[e].label} ${n}</span>`).join('')}</div>
+          <small>When its effects appear in life</small>
+          <div class="stage-dots">${stageCounts.map(([s, n]) => `<div class="${n ? 'on' : ''}" title="${STAGES[s].label}: ${n}"><i>${n || ''}</i><span>${STAGES[s].label.split(' ')[0]}</span></div>`).join('')}</div>
+        </div>
+      </div>` : ''}
+    </section>`;
   }
 
   #personality(id, color) {
@@ -612,6 +690,7 @@ export class UI {
   }
 
   showOrigin() {
+    if (this.explorer?.active) return this.explorer.showOrigin();
     const featTitle = (fid) => this.features[fid]?.title ?? this.agency?.[fid]?.title ?? fid;
     this.#panel(`
       <div class="lang-head origin-head" style="--c:#ffd9a8">

@@ -77,7 +77,7 @@ export class Cosmos {
     this.handlers = { hover: () => {}, select: () => {} };
     this.state = {
       focus: null, sizeMode: 'lexicon', showAllTrees: true, showBridges: true,
-      categories: new Set(Object.keys(CATEGORIES)), minEvidence: 0, showShadow: true,
+      categories: new Set(Object.keys(CATEGORIES)), minEvidence: 0, showShadow: true, kidOnly: null,
     };
     this.clock = new THREE.Clock();
     this.tween = null;
@@ -283,6 +283,7 @@ export class Cosmos {
     const order = [...CLUSTER_ORDER, ...[...clusters.keys()].filter((k) => !CLUSTER_ORDER.includes(k))]
       .filter((k) => clusters.has(k));
     this.clusterCenters = new Map();
+    this.familyLabels = [];
     order.forEach((key, i) => {
       const t = i / Math.max(order.length - 1, 1);
       const radius = 55 + t * 160;
@@ -307,6 +308,16 @@ export class Cosmos {
       neb.scale.set(s, s, 1);
       neb.position.copy(center);
       this.scene.add(neb);
+
+      // Family name floating under the cluster, shown from afar for orientation.
+      const fl = document.createElement('div');
+      fl.className = 'family-label';
+      fl.style.setProperty('--c', fam?.color ?? '#fff');
+      fl.textContent = members[0].family === 'indo-european' ? members[0].branch : (fam?.label ?? key);
+      const flObj = new CSS2DObject(fl);
+      flObj.position.copy(center).add(new THREE.Vector3(0, -(ring * 0.5 + 8), 0));
+      this.scene.add(flObj);
+      this.familyLabels.push(flObj);
     });
   }
 
@@ -467,7 +478,7 @@ export class Cosmos {
         const el = document.createElement('div');
         el.className = 'leaf-label';
         el.style.setProperty('--c', meta.color);
-        el.textContent = item.title;
+        el.textContent = this.leafLabeler?.(item) ?? item.title;
         el.addEventListener('click', () => this.handlers.select({ kind: 'leaf', langId: node.lang.id, item }));
         const label = new CSS2DObject(el);
         label.position.copy(leafPos).add(new THREE.Vector3(0, size + 0.35, 0));
@@ -667,6 +678,21 @@ export class Cosmos {
 
   setAutoRotate(on) { this.controls.autoRotate = on; }
 
+  setLeafLabeler(fn) {
+    this.leafLabeler = fn;
+    for (const n of this.nodes.values()) {
+      for (const l of n.leaves) l.label.element.textContent = fn?.(l.item) ?? l.item.title;
+    }
+  }
+
+  // Cinematic opening: dive in from deep space to the overview.
+  playIntro() {
+    const end = this.#overviewCam();
+    this.camera.position.copy(end.clone().multiplyScalar(6).add(new THREE.Vector3(0, 900, 0)));
+    this.controls.target.set(0, 0, 0);
+    this.#flyTo(end, new THREE.Vector3(0, 0, 0), 5.5);
+  }
+
   set(patch) {
     Object.assign(this.state, patch);
     this.applyFilters();
@@ -685,7 +711,7 @@ export class Cosmos {
 
       const shownCats = new Set();
       for (const l of n.leaves) {
-        const ok = categories.has(l.category) && l.ev.rank >= minEvidence;
+        const ok = categories.has(l.category) && l.ev.rank >= minEvidence && (!this.state.kidOnly || this.state.kidOnly.has(l.item.id));
         if (ok) shownCats.add(l.category);
         l.mesh.visible = l.twig.visible = ok && n.tree.visible;
         l.mesh.material.opacity = treeOpacity * (l.item.evidence === 'contested' ? 0.75 : 1);
@@ -750,6 +776,12 @@ export class Cosmos {
       // Fade distant labels so the overview stays readable.
       const d = this.camera.position.distanceTo(n.group.position);
       n.label.element.style.opacity = Math.max(0.15, Math.min(1, 1.6 - d / 260));
+    }
+
+    const camDist = this.camera.position.distanceTo(this.controls.target);
+    for (const fl of this.familyLabels) {
+      // Visible from mid-distance; fades out again during the deep-space intro.
+      fl.element.style.opacity = Math.max(0, Math.min(0.6, (camDist - 110) / 140) * Math.min(1, (900 - camDist) / 300));
     }
 
     for (const b of this.bridges) {

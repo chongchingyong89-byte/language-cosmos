@@ -30,7 +30,9 @@ const data = {
 };
 try {
   const cosmos = new Cosmos(document.getElementById('scene'), data);
-  new UI(cosmos, data, new SoundScape());
+  if (!location.hash) cosmos.playIntro();
+  const ui = new UI(cosmos, data, new SoundScape());
+  ui.explorer.welcome();
   window.cosmos = cosmos; // handy for poking at it from the devtools console
 } catch (err) {
   console.error(err);

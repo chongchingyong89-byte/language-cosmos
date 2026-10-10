@@ -137,6 +137,63 @@ export class SoundScape {
     this.#bell(mtof(55), { gain: 0.06, decay: 5, bright: 0.2, when: 0.15 });
   }
 
+
+  cheer() {
+    if (!this.#ready()) return;
+    [0, 2, 4, 5, 7, 10].forEach((d, i) => this.#bell(mtof(penta(d + 5, 60)), { gain: 0.11, decay: 1.6, bright: 0.6, when: i * 0.07, pan: -0.6 + i * 0.24 }));
+  }
+
+  oops() {
+    if (!this.#ready()) return;
+    this.#blip(mtof(penta(9)), mtof(penta(5)), { gain: 0.06, dur: 0.3 });
+  }
+
+  // A synthetic "ma" whose pitch follows `points` ([t 0..1, Hz] pairs).
+  // Used by Tone Detective; plays even when ambient sound is muted, because
+  // the player asked to hear it.
+  syllable(points, dur = 0.5) {
+    if (!this.ctx) this.#build();
+    this.ctx.resume();
+    const ctx = this.ctx, t0 = ctx.currentTime + 0.03;
+    const src = ctx.createOscillator();
+    src.type = 'sawtooth';
+    src.frequency.setValueAtTime(points[0][1], t0);
+    for (const [x, hz] of points.slice(1)) src.frequency.linearRampToValueAtTime(hz, t0 + 0.07 + x * dur);
+
+    // Nasal "m" murmur, then the open vowel "a" (formants ≈ 800 / 1200 / 2600 Hz).
+    const nasal = ctx.createBiquadFilter();
+    nasal.type = 'lowpass';
+    nasal.frequency.value = 350;
+    const nasalG = ctx.createGain();
+    nasalG.gain.setValueAtTime(0.0001, t0);
+    nasalG.gain.exponentialRampToValueAtTime(0.5, t0 + 0.02);
+    nasalG.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.11);
+    src.connect(nasal).connect(nasalG);
+
+    const vowel = ctx.createGain();
+    vowel.gain.setValueAtTime(0.0001, t0);
+    vowel.gain.exponentialRampToValueAtTime(0.9, t0 + 0.09);
+    vowel.gain.setValueAtTime(0.9, t0 + 0.07 + dur * 0.8);
+    vowel.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07 + dur + 0.08);
+    const sum = ctx.createGain();
+    sum.gain.value = 0.32;
+    for (const [f, q, g] of [[800, 7, 1], [1200, 9, 0.55], [2600, 12, 0.22]]) {
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = f;
+      bp.Q.value = q;
+      const bg = ctx.createGain();
+      bg.gain.value = g * 3;
+      src.connect(bp).connect(bg).connect(vowel);
+    }
+    vowel.connect(sum);
+    nasalG.connect(sum);
+    sum.connect(this.out);
+    src.start(t0);
+    src.stop(t0 + dur + 0.25);
+    src.onended = () => { src.disconnect(); sum.disconnect(); };
+  }
+
   // ── Engine ───────────────────────────────────────────────────────────────
   #ready() {
     return this.enabled && this.ctx && this.ctx.state === 'running';
@@ -161,6 +218,7 @@ export class SoundScape {
     limiter.attack.value = 0.005;
     limiter.release.value = 0.3;
     limiter.connect(ctx.destination);
+    this.out = limiter;
 
     this.master = ctx.createGain();
     this.master.gain.value = 0;

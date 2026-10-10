@@ -29,6 +29,7 @@
     <div class="brand">
       <h1>语言宇宙 <span>Language Cosmos</span></h1>
       <p>Languages as stars. Their branches are the ways they may shape the mind.</p>
+      <button id="mode-toggle" class="mode-pill" title="Switch between Explorer (kids) and Research mode"><span class="mode-label">🔬 Research</span><span class="swap">⇄</span></button>
     </div>
     <nav class="hud-actions" aria-label="Quick actions">
       <button id="btn-list" class="icon-btn" aria-label="Languages">
@@ -77,20 +78,40 @@
           <option value="speakers">Speakers</option>
         </select>
       </label>
-      <label>Evidence <select id="ev-filter"></select></label>
-      <label class="lens-ctl" title="Recolour every star by its hypothesised tilt on one trait">Personality lens <select id="lens"></select></label>
+      <label class="research-only">Evidence <select id="ev-filter"></select></label>
+      <label class="lens-ctl research-only" title="Recolour every star by its hypothesised tilt on one trait">Personality lens <select id="lens"></select></label>
       <label class="tog"><input id="toggle-trees" type="checkbox" checked> All trees</label>
       <label class="tog"><input id="toggle-bridges" type="checkbox" checked> Bridges</label>
-      <label class="tog shadow-tog" title="Red thorns mark leaves with a documented or hypothesised downside"><input id="toggle-shadow" type="checkbox" checked> Shadow side</label>
+      <label class="tog shadow-tog research-only" title="Red thorns mark leaves with a documented or hypothesised downside"><input id="toggle-shadow" type="checkbox" checked> Shadow side</label>
       <label class="tog"><input id="toggle-rotate" type="checkbox" checked> Drift</label>
       <label class="tog sound" title="Ambient sound and interaction cues (M)"><input id="toggle-sound" type="checkbox" checked> Sound
         <input id="volume" type="range" min="0" max="1" step="0.01" aria-label="Volume"></label>
+      <button id="mode-toggle-2" title="Switch between Explorer (kids) and Research mode"><span class="mode-label">🔬 Research</span> ⇄</button>
       <button id="btn-overview">Overview</button>
       <button id="btn-export" title="Download your study notes as JSON">Export notes</button>
     </div>
   </footer>
 
   <button id="lens-key" class="glass" hidden title="Turn the lens off"></button>
+
+  <div id="welcome" hidden>
+    <div class="wel-inner">
+      <div class="wel-title">语言宇宙</div>
+      <div class="wel-sub">Language Cosmos</div>
+      <p class="wel-tag">How the language you're born into shapes your mind</p>
+      <p class="wel-q">Who's exploring today?</p>
+      <div class="wel-choices">
+        <button data-mode="kids"><span>🧑‍🚀</span><b>Young Explorer</b><small>Stars that say hello, brain superpowers, games &amp; a space mission</small></button>
+        <button data-mode="research"><span>🔬</span><b>Researcher</b><small>Evidence, sources, personality radar, shadow side &amp; from-birth timeline</small></button>
+      </div>
+      <small class="wel-foot">You can switch anytime.</small>
+    </div>
+  </div>
+
+  <div id="game" hidden>
+    <div class="game-card glass"><button class="game-x" aria-label="Close game">✕</button><div class="game-body"></div></div>
+  </div>
+  <div id="toast" hidden></div>
   <div id="tooltip" hidden></div>
 
   <script type="module" src="src/main.js"></script>

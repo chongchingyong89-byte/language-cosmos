@@ -14,6 +14,13 @@ A 3D universe for studying how each language may shape attitude, creativity, con
 - **Red thorns** mark the shadow side: evidence-graded negative effects.
 - **Sign languages** (ASL, BSL, BIM, CSL) are included. Deaf children's late access to a first language gives the strongest evidence that *timing* matters.
 
+## Two modes
+
+- **🧑‍🚀 Explorer (kids):** stars say hello in their own language (device speech voice), leaves become "brain superpowers" with a ★ rating of how sure scientists are, a 10-stop **Space Mission** with a quiz, a **Language Passport** with stamps and badges, and three mini-games based on real experiments: **Tone Detective** (Mandarin tones), **Number Ninja** (Chinese and Malay counting) and **Blue Spotter** (the Russian-blues reaction-time task). The shadow side and personality scores are hidden in this mode.
+- **🔬 Research:** evidence grades, sources, an "at a glance" infographic per language (rank bars, domain donut, evidence strip, life-stage dots), the personality radar and lens, the shadow side, and the from-birth timeline.
+
+First-time visitors choose a mode on the welcome screen; the ⇄ pill switches anytime.
+
 ## Run
 
 ```bash
@@ -41,6 +48,7 @@ src/
   ui.js                 list, detail panel, legend filters, tooltip, study notes
   audio.js              procedural soundscape: ambient pad, wind, twinkles, interaction cues
   profile.js            builds each language's hypothesised personality tilt from its leaves
+  kids/                 Explorer mode: data.js (greetings, powers, tour, quiz, badges), explorer.js, games.js
   data/
     taxonomy.js         8 trait domains, 5 evidence levels, families, galaxy order
     features.js         linguistic features → claimed effects (+ refs, how to test), bilingual bridges
