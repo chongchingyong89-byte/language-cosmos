@@ -326,6 +326,27 @@ export const FEATURES = {
     ex: { ar: 'Fuṣḥā (MSA) vs. ʿāmmiyya dialects', ta: 'செந்தமிழ் (literary) vs. கொடுந்தமிழ் (colloquial)', xml: 'BIM (natural Deaf language) vs. KTBM (signed Malay used in schools)' },
   },
 
+  numeral_classifiers: {
+    title: 'Counter words (numeral classifiers)', category: 'cognition', evidence: 'moderate',
+    claim: 'Counting needs a shape- or kind-based counter word ("three long-thing pens"). Classifier languages also lack an "a / some" count grammar for nouns, and their speakers group ambiguous new objects more by material and less by shape than English speakers do.',
+    mechanism: 'Nouns behave like substances that need a unit to be counted, so attention shifts towards what things are made of.',
+    refs: [
+      'Lucy (1992). Grammatical Categories and Cognition (Yucatec Maya vs English).',
+      'Imai & Gentner (1997). A cross-linguistic study of early word meaning. Cognition 62.',
+      'Mixed results for Mandarin: Srinivasan (2010). Language and Cognition 2(2).',
+    ],
+    study: 'Triad task: a cork pyramid; is a cork disc or a plastic pyramid "the same"? Compare speakers of classifier and non-classifier languages.',
+    ex: { ja: '本 hon (long) / 枚 mai (flat) / 個 ko (round)', zh: '支 zhī (pens) / 张 zhāng (flat) / 个 gè (general)', yue: '支 zi1 / 張 zoeng1 / 個 go3', ko: '병 (bottles) / 장 (sheets) / 개 (things)', th: 'แท่ง (sticks) / แผ่น (sheets) / ลูก (round)', vi: 'cái / con / tờ', ms: 'sebatang (long) / sehelai (flat) / sebiji (round)' },
+  },
+  sound_symbolism: {
+    title: 'Rich sound-symbolic words (mimetics)', category: 'creativity', evidence: 'moderate',
+    claim: 'Hundreds of words mimic sounds, movements and feelings (ぽつぽつ drip-drop, ざあざあ pouring, きらきら sparkling). Sound-symbolic words help toddlers learn new verbs.',
+    mechanism: 'The sound of the word resembles its meaning, which gives children a bridge from perception to vocabulary.',
+    refs: ['Imai, Kita, Nagumo & Okada (2008). Sound symbolism facilitates early verb learning. Cognition 109.'],
+    study: 'Teach children novel verbs with sound-symbolic and arbitrary labels, then test generalisation.',
+    ex: { ja: 'ぽつぽつ / ざあざあ / きらきら', ko: '반짝반짝 (sparkle) / 주룩주룩 (pouring rain)' },
+  },
+
   // ── Sign languages (modality: hands, face, space) ─────────────────────────
   spatial_grammar: {
     title: 'Grammar in space', category: 'perception', evidence: 'moderate',

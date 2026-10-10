@@ -64,6 +64,8 @@ export const POWERS = {
   genderless_pronouns:   { emoji: '🧑', name: 'One Word for He & She', fact: 'One little word means both "he" and "she"!' },
   pro_drop:              { emoji: '🤫', name: 'Skip the "I"', fact: 'You can leave out "I" and "you", because everyone already knows who you mean!' },
   diglossia:             { emoji: '📚', name: 'Two Languages in One', fact: 'There\'s a fancy way for books and news, and a different everyday way for chatting at home!' },
+  numeral_classifiers:   { emoji: '🧩', name: 'Shape Sorter', fact: 'You count with special words that depend on shape: one word for long things, another for flat things, another for round things!' },
+  sound_symbolism:       { emoji: '🌧️', name: 'Sound Painter', fact: 'Hundreds of words that sound like what they mean, like ぽつぽつ (drip-drop) and ざあざあ (pouring rain)!' },
   spatial_grammar:       { emoji: '🤟', name: '3D Thinker', fact: 'Grammar happens in the air with your hands! Signers are great at imagining shapes turning in space.' },
   facial_grammar:        { emoji: '🙂', name: 'Face Reader', fact: 'Eyebrows are grammar! Raising them can turn a sentence into a question. Signers are face-reading experts.' },
   iconicity:             { emoji: '✋', name: 'Picture Words', fact: 'Many signs look like what they mean: the sign for TREE looks like a tree swaying in the wind!' },
@@ -113,4 +115,6 @@ export const BADGES = [
   { id: 'tone',     emoji: '🎵', name: 'Tone Detective',     desc: 'Won Tone Detective' },
   { id: 'number',   emoji: '🔢', name: 'Number Ninja',       desc: 'Won Number Ninja' },
   { id: 'blue',     emoji: '🔵', name: 'Blue Spotter',       desc: 'Finished Blue Spotter' },
+  { id: 'konbini',  emoji: '🏪', name: 'Konbini Clerk',      desc: 'Finished a night shift in Japan' },
+  { id: 'konbini3', emoji: '🌟', name: 'Star Clerk',         desc: 'Got ★★★ on a konbini night shift' },
 ];

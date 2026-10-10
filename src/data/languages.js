@@ -190,7 +190,7 @@ export const LANGUAGES = [
     id: 'zh', name: 'Mandarin', native: '普通话 · 汉语', family: 'sino-tibetan', cluster: 'sino-tibetan', branch: 'Sinitic',
     speakers: 1138, lexicon: { n: 370000, source: '汉语大词典 Hanyu Da Cidian' },
     typology: { order: 'SVO', script: 'Hanzi (logographic)', morphology: 'Isolating', tone: true },
-    features: ['vertical_time', 'weak_ftr', 'tonal', 'transparent_numerals', 'short_digits', 'logographic', 'pro_drop', 'kinship_lexicon', 'genderless_pronouns', 'motion_satellite', 'productive_compounding'],
+    features: ['numeral_classifiers', 'vertical_time', 'weak_ftr', 'tonal', 'transparent_numerals', 'short_digits', 'logographic', 'pro_drop', 'kinship_lexicon', 'genderless_pronouns', 'motion_satellite', 'productive_compounding'],
     concepts: [
       { term: '面子 (miànzi)', gloss: 'Face: social standing earned and given', category: 'social', ref: 'Hu (1944). The Chinese concepts of "face". American Anthropologist 46.' },
       { term: '缘分 (yuánfèn)', gloss: 'Fated affinity between people', category: 'emotion' },
@@ -200,7 +200,7 @@ export const LANGUAGES = [
     id: 'yue', name: 'Cantonese', native: '粵語 · 廣東話', family: 'sino-tibetan', cluster: 'sino-tibetan', branch: 'Sinitic',
     speakers: 86, lexicon: { n: 60000, source: 'words.hk Cantonese dictionary (shares the written Chinese lexicon)', verify: true },
     typology: { order: 'SVO', script: 'Hanzi (traditional)', morphology: 'Isolating', tone: true },
-    features: ['vertical_time', 'weak_ftr', 'tonal', 'transparent_numerals', 'short_digits', 'logographic', 'pro_drop', 'kinship_lexicon', 'genderless_pronouns'],
+    features: ['numeral_classifiers', 'vertical_time', 'weak_ftr', 'tonal', 'transparent_numerals', 'short_digits', 'logographic', 'pro_drop', 'kinship_lexicon', 'genderless_pronouns'],
     concepts: [
       { term: '人情 (jan4 cing4)', gloss: 'Reciprocal obligation of favours', category: 'social', ref: 'Hwang (1987). Face and favor. American J. Sociology 92(4).' },
     ],
@@ -210,7 +210,7 @@ export const LANGUAGES = [
     id: 'ko', name: 'Korean', native: '한국어', family: 'koreanic', cluster: 'koreanic', branch: 'Koreanic',
     speakers: 82, lexicon: { n: 420000, source: '표준국어대사전 (Standard Korean Language Dictionary)', verify: true },
     typology: { order: 'SOV', script: 'Hangul', morphology: 'Agglutinative', tone: false },
-    features: ['strong_ftr', 'honorific_grammar', 'evidentiality', 'pro_drop', 'transparent_numerals', 'short_digits', 'kinship_lexicon', 'agglutination', 'motion_verb_framed'],
+    features: ['numeral_classifiers', 'sound_symbolism', 'strong_ftr', 'honorific_grammar', 'evidentiality', 'pro_drop', 'transparent_numerals', 'short_digits', 'kinship_lexicon', 'agglutination', 'motion_verb_framed'],
     concepts: [
       { term: '정 (jeong)', gloss: 'Deep, sticky affection built over time', category: 'emotion' },
       { term: '한 (han)', gloss: 'Collective grief and unresolved resentment', category: 'emotion' },
@@ -221,7 +221,7 @@ export const LANGUAGES = [
     id: 'ja', name: 'Japanese', native: '日本語', family: 'japonic', cluster: 'japonic', branch: 'Japonic',
     speakers: 123, lexicon: { n: 500000, source: '日本国語大辞典, 2nd ed.' },
     typology: { order: 'SOV', script: 'Kanji + kana', morphology: 'Agglutinative', tone: false },
-    features: ['weak_ftr', 'honorific_grammar', 'pro_drop', 'speaker_gender_marking', 'motion_verb_framed', 'logographic', 'transparent_numerals', 'short_digits', 'agglutination', 'productive_compounding'],
+    features: ['numeral_classifiers', 'sound_symbolism', 'weak_ftr', 'honorific_grammar', 'pro_drop', 'speaker_gender_marking', 'motion_verb_framed', 'logographic', 'transparent_numerals', 'short_digits', 'agglutination', 'productive_compounding'],
     concepts: [
       { term: '甘え (amae)', gloss: 'Presuming on another\'s indulgent love', category: 'emotion', ref: 'Doi (1971). The Anatomy of Dependence.' },
       { term: '空気を読む', gloss: '"Reading the air": sensing unspoken expectations', category: 'social', ref: 'Ide (1989). Multilingua 8.' },
@@ -234,7 +234,7 @@ export const LANGUAGES = [
     id: 'th', name: 'Thai', native: 'ภาษาไทย', family: 'kra-dai', cluster: 'kra-dai', branch: 'Tai',
     speakers: 61, lexicon: { n: 40000, source: 'Royal Institute Dictionary', verify: true },
     typology: { order: 'SVO', script: 'Thai', morphology: 'Isolating', tone: true },
-    features: ['tonal', 'transparent_numerals', 'honorific_grammar', 'pro_drop', 'speaker_gender_marking'],
+    features: ['numeral_classifiers', 'tonal', 'transparent_numerals', 'honorific_grammar', 'pro_drop', 'speaker_gender_marking'],
     concepts: [
       { term: 'เกรงใจ (kreng jai)', gloss: 'Reluctance to impose on others', category: 'social', ref: 'Komin (1990). Psychology of the Thai People.' },
       { term: 'ใจเย็น (jai yen)', gloss: '"Cool heart": calm emotional restraint', category: 'emotion', ref: 'Komin (1990).' },
@@ -244,7 +244,7 @@ export const LANGUAGES = [
     id: 'vi', name: 'Vietnamese', native: 'Tiếng Việt', family: 'austroasiatic', cluster: 'austroasiatic', branch: 'Vietic',
     speakers: 86, lexicon: { n: 40000, source: 'Từ điển tiếng Việt (Hoàng Phê)', verify: true },
     typology: { order: 'SVO', script: 'Latin (Quốc ngữ)', morphology: 'Isolating', tone: true },
-    features: ['tonal', 'weak_ftr', 'transparent_numerals', 'kinship_lexicon', 'pro_drop'],
+    features: ['numeral_classifiers', 'tonal', 'weak_ftr', 'transparent_numerals', 'kinship_lexicon', 'pro_drop'],
     concepts: [
       { term: 'anh / chị / em', gloss: 'Kin terms used as "I/you", so every sentence places you in a family', category: 'self', ref: 'Luong (1990).' },
     ],
@@ -261,7 +261,7 @@ export const LANGUAGES = [
     id: 'ms', name: 'Malay', native: 'Bahasa Melayu', family: 'austronesian', cluster: 'austronesian', branch: 'Malayic',
     speakers: 290, lexicon: { n: 82000, source: 'Kamus Dewan, 4th ed. (Indonesian KBBI is larger)', verify: true },
     typology: { order: 'SVO', script: 'Latin (Rumi) / Jawi', morphology: 'Agglutinative-lite', tone: false },
-    features: ['weak_ftr', 'transparent_numerals', 'genderless_pronouns', 'pro_drop', 'tv_distinction', 'kinship_lexicon'],
+    features: ['numeral_classifiers', 'weak_ftr', 'transparent_numerals', 'genderless_pronouns', 'pro_drop', 'tv_distinction', 'kinship_lexicon'],
     concepts: [
       { term: 'malu', gloss: 'Shame and propriety as social virtues', category: 'emotion', ref: 'Goddard (1996). The "social emotions" of Malay. Ethos 24(3).' },
       { term: 'budi', gloss: 'Moral reciprocity; "hutang budi" is a debt of kindness', category: 'social', ref: 'Lim Kim Hui (2003). Budi as the Malay Mind.' },

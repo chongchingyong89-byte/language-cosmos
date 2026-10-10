@@ -9,6 +9,17 @@ const mtof = (m) => 440 * 2 ** ((m - 69) / 12);
 const penta = (deg, base = 60) => base + 12 * Math.floor(deg / 5) + PENTA[((deg % 5) + 5) % 5];
 const rand = (a, b) => a + Math.random() * (b - a);
 
+// Generated shop music, one preset per country (composed live, so no licence
+// issues). jp: koto-like plucks in the Japanese "in" scale (D Eb G A Bb, the
+// scale of Sakura Sakura) over soft lo-fi chords.
+const SHOP_MUSIC = {
+  jp: {
+    bpm: 66, gain: 0.5, density: 0.42,
+    melody: [62, 63, 67, 69, 70, 74, 75, 79, 81, 82],
+    chords: [[43, 55, 58, 62, 69], [39, 51, 55, 58, 62], [38, 50, 55, 57, 62], [39, 51, 55, 58, 65]],
+  },
+};
+
 // Slow progression; pad voices glide from one chord to the next.
 const CHORDS = [
   [36, 43, 52, 59, 62], // Cmaj9
@@ -146,6 +157,141 @@ export class SoundScape {
   oops() {
     if (!this.#ready()) return;
     this.#blip(mtof(penta(9)), mtof(penta(5)), { gain: 0.06, dur: 0.3 });
+  }
+
+  // ── World Shops ambience ────────────────────────────────────────────────
+  // Rain: filtered noise, a bright hiss plus a low drumming, scaled by level.
+  setRain(level) {
+    if (!this.ctx) { if (!level) return; this.#build(); }
+    const ctx = this.ctx, t = ctx.currentTime;
+    if (!this.rainNodes) {
+      const mk = (type, freq, q) => {
+        const src = ctx.createBufferSource();
+        src.buffer = this.noise;
+        src.loop = true;
+        src.playbackRate.value = 0.8 + Math.random() * 0.4;
+        const f = ctx.createBiquadFilter();
+        f.type = type;
+        f.frequency.value = freq;
+        f.Q.value = q;
+        const g = ctx.createGain();
+        g.gain.value = 0;
+        src.connect(f).connect(g).connect(this.master);
+        src.start();
+        return g;
+      };
+      this.rainNodes = { hiss: mk('highpass', 2400, 0.4), patter: mk('bandpass', 900, 0.6), rumble: mk('lowpass', 260, 0.7) };
+    }
+    const { hiss, patter, rumble } = this.rainNodes;
+    hiss.gain.setTargetAtTime(level * 0.11, t, 1.2);
+    patter.gain.setTargetAtTime(level * 0.09, t, 1.2);
+    rumble.gain.setTargetAtTime(level * 0.12, t, 1.5);
+  }
+
+  // Lower the cosmic pad while a shop is open, so the rain can take over.
+  duck(on) {
+    if (!this.ctx) return;
+    this.ambBus.gain.setTargetAtTime(on ? 0.14 : 0.42, this.ctx.currentTime, 0.6);
+  }
+
+  // Our own four-note door chime (not any store's real melody).
+  chime() {
+    if (!this.#ready()) return;
+    [[76, 0], [72, 0.22], [79, 0.44], [84, 0.7]].forEach(([m, w]) => this.#bell(mtof(m), { gain: 0.09, decay: 1.6, bright: 0.35, when: w }));
+  }
+
+  register() {
+    if (!this.#ready()) return;
+    this.#blip(2400, 2400, { gain: 0.05, dur: 0.06, verb: 0.1 });
+    this.#bell(mtof(91), { gain: 0.06, decay: 0.9, bright: 0.8, when: 0.08 });
+  }
+
+  thunder() {
+    if (!this.#ready()) return;
+    const ctx = this.ctx, t = ctx.currentTime + 0.1;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.setValueAtTime(400, t);
+    f.frequency.exponentialRampToValueAtTime(70, t + 2.5);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.35, t + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 2.8);
+    src.connect(f).connect(g).connect(this.master);
+    const send = ctx.createGain();
+    send.gain.value = 0.5;
+    g.connect(send).connect(this.verbIn);
+    src.start(t);
+    src.stop(t + 3);
+  }
+
+  shopMusic(id) {
+    this.music?.stop();
+    this.music = null;
+    const P = SHOP_MUSIC[id];
+    if (!P) return;
+    if (!this.ctx) this.#build();
+    const ctx = this.ctx;
+    const bus = ctx.createGain();
+    bus.gain.value = 0;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 3000; // lo-fi warmth
+    const send = ctx.createGain();
+    send.gain.value = 0.35;
+    bus.connect(lp).connect(this.master);
+    lp.connect(send).connect(this.verbIn);
+    bus.gain.setTargetAtTime(P.gain, ctx.currentTime, 1.5);
+
+    const eighth = 60 / P.bpm / 2;
+    let next = ctx.currentTime + 0.4, step = 0, idx = 4;
+    const pluck = (m, t, vel) => {
+      const f = mtof(m);
+      const o1 = ctx.createOscillator(), o2 = ctx.createOscillator();
+      o1.type = 'triangle'; o1.frequency.value = f;
+      o2.type = 'sawtooth'; o2.frequency.value = f * 1.003;
+      const mix2 = ctx.createGain(); mix2.gain.value = 0.25;
+      const filt = ctx.createBiquadFilter(); filt.type = 'lowpass';
+      filt.frequency.setValueAtTime(3600, t); filt.frequency.exponentialRampToValueAtTime(650, t + 0.3);
+      const amp = ctx.createGain();
+      amp.gain.setValueAtTime(0.0001, t);
+      amp.gain.exponentialRampToValueAtTime(0.16 * vel, t + 0.004);
+      amp.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
+      o1.connect(filt); o2.connect(mix2).connect(filt); filt.connect(amp).connect(bus);
+      for (const o of [o1, o2]) { o.start(t); o.stop(t + 1.9); }
+      o1.onended = () => amp.disconnect();
+    };
+    const chord = (notes, t) => notes.forEach((m, i) => {
+      const o = ctx.createOscillator(); o.type = i === 0 ? 'sine' : 'triangle'; o.frequency.value = mtof(m);
+      const g = ctx.createGain(); const tt = t + i * 0.035;
+      g.gain.setValueAtTime(0.0001, tt);
+      g.gain.exponentialRampToValueAtTime(i === 0 ? 0.09 : 0.035, tt + 0.06);
+      g.gain.exponentialRampToValueAtTime(0.0001, tt + eighth * 15);
+      o.connect(g).connect(bus); o.start(tt); o.stop(tt + eighth * 16);
+      o.onended = () => g.disconnect();
+    });
+    const tick = () => {
+      while (next < ctx.currentTime + 0.35) {
+        if (step % 16 === 0) chord(P.chords[(step / 16) % P.chords.length], next);
+        const rest = step % 16 >= 13; // breathe at the end of each phrase
+        if (!rest && Math.random() < P.density) {
+          idx = Math.min(Math.max(idx + [-2, -1, -1, 1, 1, 2][Math.floor(Math.random() * 6)], 0), P.melody.length - 1);
+          pluck(P.melody[idx], next, step % 4 === 0 ? 1 : 0.7);
+        }
+        next += eighth * (step % 2 ? 0.9 : 1.1); // gentle swing
+        step++;
+      }
+    };
+    const timer = setInterval(tick, 90);
+    this.music = {
+      stop: () => {
+        clearInterval(timer);
+        bus.gain.setTargetAtTime(0, ctx.currentTime, 0.4);
+        setTimeout(() => { bus.disconnect(); lp.disconnect(); send.disconnect(); }, 2500);
+      },
+    };
   }
 
   // A synthetic "ma" whose pitch follows `points` ([t 0..1, Hz] pairs).

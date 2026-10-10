@@ -126,6 +126,15 @@ export class UI {
     // Deep link: index.html#ja opens straight onto a language.
     const fromHash = (instant) => {
       const id = decodeURIComponent(location.hash.slice(1));
+      // Shop links: #shop (picker), #shop-jp (intro), #shop-jp/play (start a night)
+      const shopLink = id.match(/^shop(?:-(\w+))?(\/play)?$/);
+      if (shopLink) {
+        const shops = this.explorer.shops;
+        if (!shopLink[1]) shops.openPicker();
+        else if (shopLink[2]) shops.play(shopLink[1]);
+        else shops.introById(shopLink[1]);
+        return;
+      }
       if (id === 'origin') {
         this.cosmos.focusOrigin({ instant });
         this.showOrigin();
@@ -469,6 +478,9 @@ export class UI {
     for (const el of p.querySelectorAll('[data-tour]')) {
       el.addEventListener('click', () => this.explorer.startTour());
     }
+    for (const el of p.querySelectorAll('[data-shops]')) {
+      el.addEventListener('click', () => this.explorer.shops.openPicker());
+    }
     this.#renderList();
   }
 
@@ -485,6 +497,7 @@ export class UI {
       <p class="lead"><span class="only-mouse">Click a star · drag to orbit · scroll to zoom</span><span class="only-touch">Tap a star · drag to orbit · pinch to zoom</span></p>
       <button class="start-btn" data-origin>Start here: <b>母语 · how a mother tongue shapes you, from birth</b> →</button>
       <button class="start-btn tour" data-tour>▶ <b>Guided tour</b>: 10 stops through the cosmos</button>
+      <button class="start-btn shop" data-shops>🏪 <b>World Shops</b>: learn a language and its attitudes at a shop counter (Japan open now)</button>
       <h3>Map key</h3>
       ${keyHtml()}
       <h3>How to read it</h3>

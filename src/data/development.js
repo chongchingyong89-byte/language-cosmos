@@ -130,7 +130,7 @@ export const TIMELINE = [
 
 // When each feature's effect is first observed (where known).
 export const FEATURE_STAGE = {
-  tonal: 'infancy', late_access: 'infancy',
+  tonal: 'infancy', late_access: 'infancy', sound_symbolism: 'toddler', numeral_classifiers: 'early',
   blue_split: 'toddler', gendered_you: 'toddler', genderless_pronouns: 'toddler', pro_drop: 'toddler',
   agglutination: 'toddler', noun_classes: 'toddler', iconicity: 'toddler',
   absolute_frame: 'early', transparent_numerals: 'early', kinship_lexicon: 'early', gendered_nouns: 'early',

@@ -3,6 +3,8 @@ import { FAMILIES, STAGES } from '../data/taxonomy.js';
 import { GREETINGS, POWERS, SURE, TOUR, QUIZ, BADGES } from './data.js';
 import { Games } from './games.js';
 import { VOICES } from './voices.js';
+import { ShopGame } from '../shops/engine.js';
+import { JAPAN } from '../shops/japan.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -35,6 +37,11 @@ export class Explorer {
     this.tourIndex = null;
     window.speechSynthesis?.getVoices(); // start loading voices early
     this.games = new Games(this.sound, { onFinish: (g, score, total) => this.#gameDone(g, score, total) });
+    this.shops = new ShopGame(this.sound, {
+      onFinish: (shop, stars) => {
+        if (shop === 'jp') { this.award('konbini'); if (stars === 3) this.award('konbini3'); }
+      },
+    });
 
     $('#mode-toggle').addEventListener('click', () => this.setMode(this.active ? 'research' : 'kids'));
     $('#mode-toggle-2').addEventListener('click', () => this.setMode(this.active ? 'research' : 'kids'));
@@ -89,6 +96,7 @@ export class Explorer {
         <h2>Welcome, Space Explorer!</h2>
         <p>Every glowing star is a <b>language</b>. Tap one to hear it say hello and discover the <b>brain superpowers</b> it gives the people who speak it.</p>
         <button class="kid-btn wide" data-tour>▶ Start the Space Mission</button>
+        <button class="kid-btn wide shop-btn" data-shops>🏪 World Shops: work a shop counter in Japan</button>
         <div class="kid-row">
           <button class="kid-btn ghost" data-game="tone">🎵 Tone Detective</button>
           <button class="kid-btn ghost" data-game="number">🔢 Number Ninja</button>
@@ -120,6 +128,7 @@ export class Explorer {
         <div><b>${people(l.speakers)}</b><span>people ${l.family === 'sign' ? 'sign' : 'speak'} it</span></div>
         <div><b>${l.lexicon.n.toLocaleString('en')}</b><span>words in its big dictionary</span></div>
       </div>
+      ${id === 'ja' ? '<button class="kid-btn wide shop-btn" data-konbini>🏪 Work a night shift at a Japanese konbini</button>' : ''}
       <h3>Brain superpowers</h3>
       ${powers.length ? powers.map((it) => this.#powerCard(it)).join('') : '<p class="muted">Scientists are still discovering this language\'s superpowers!</p>'}
     `, () => this.#wire(id));
@@ -182,6 +191,8 @@ export class Explorer {
     const body = $('#panel-body');
     body.querySelector('[data-tour]')?.addEventListener('click', () => this.startTour());
     body.querySelector('[data-passport]')?.addEventListener('click', () => this.showPassport());
+    body.querySelector('[data-shops]')?.addEventListener('click', () => this.shops.openPicker());
+    body.querySelector('[data-konbini]')?.addEventListener('click', () => this.shops.intro(JAPAN));
     body.querySelector('[data-speak]')?.addEventListener('click', () => this.speak(langId));
     for (const b of body.querySelectorAll('[data-game]')) b.addEventListener('click', (e) => { e.stopPropagation(); this.games.open(b.dataset.game); });
     for (const card of body.querySelectorAll('.power:not(.big)')) {

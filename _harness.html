@@ -1,0 +1,11 @@
+<!doctype html><meta charset="utf-8"><style>body{margin:0;background:#333;display:flex;gap:16px;padding:8px;align-items:flex-start}iframe{border:0;background:#000}</style><body></body><script>
+const q=new URLSearchParams(location.search);
+try{localStorage.setItem("language-cosmos.mode",JSON.stringify(q.get("mode")||"kids"))}catch(e){}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+for(const spec of q.getAll("f")){const [w,h,hash,script]=spec.split(",");
+ const f=document.createElement("iframe");f.width=w;f.height=h;f.src="index.html"+(hash?"#"+hash:"");
+ f.onload=async()=>{await sleep(1500);const d=f.contentDocument;for(const st of (script||"").split(";").filter(Boolean)){const [k,v]=st.split("=");
+  if(k==="wait")await sleep(+v); if(k==="click"){d.querySelector(v)?.click();} if(k==="answer"){const o=[...d.querySelectorAll(".opt")];(v==="ok"?o.find(b=>b.querySelector("b")):o[0])?.click();}
+  if(k==="next")d.querySelector("[data-next]")?.click(); if(k==="scroll")d.querySelector(v)?.scrollIntoView(); }};
+ document.body.appendChild(f);}
+</script>
