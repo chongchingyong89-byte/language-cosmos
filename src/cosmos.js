@@ -11,6 +11,8 @@ import { CATEGORIES, EVIDENCE, FAMILIES, CLUSTER_ORDER } from './data/taxonomy.j
 const OVERVIEW = { cam: new THREE.Vector3(0, 120, 200), target: new THREE.Vector3(0, 0, 0) };
 const CORE_MIN = 0.7, CORE_MAX = 3.4;
 const TRUNK_LEN = 3.4, TWIG_LEN = 2.4;
+// Phones/tablets: fewer particles, lower pixel ratio.
+const LOW_POWER = matchMedia('(pointer: coarse)').matches || Math.min(screen.width, screen.height) < 600;
 
 // Deterministic randomness so the universe looks the same every load.
 function mulberry32(seed) {
@@ -78,6 +80,7 @@ export class Cosmos {
     this.tween = null;
     this.hovered = null;
     this.glow = glowTexture();
+    this.viewOffset = { x: 0, y: 0, tx: 0, ty: 0 };
 
     this.#initRenderer();
     this.#buildBackdrop();
@@ -100,10 +103,10 @@ export class Cosmos {
     this.scene.fog = new THREE.FogExp2('#02030a', 0.0011);
 
     this.camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 6000);
-    this.camera.position.copy(OVERVIEW.cam);
+    this.camera.position.copy(this.#overviewCam());
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, LOW_POWER ? 1.5 : 2));
     this.renderer.setSize(w, h);
     this.container.appendChild(this.renderer.domElement);
 
@@ -130,6 +133,34 @@ export class Cosmos {
     window.addEventListener('resize', () => this.#resize());
   }
 
+  // Portrait screens see less horizontally, so pull the camera back.
+  #fit(power = 0.75) {
+    return this.camera.aspect < 1 ? (1 / this.camera.aspect) ** power : 1;
+  }
+
+  #overviewCam() {
+    return OVERVIEW.cam.clone().multiplyScalar(this.#fit());
+  }
+
+  // Keep the scene centred in the area not covered by panels (px on each side).
+  setViewInset({ left = 0, right = 0, top = 0, bottom = 0 } = {}) {
+    this.viewOffset.tx = (right - left) / 2;
+    this.viewOffset.ty = (bottom - top) / 2;
+  }
+
+  #applyViewOffset(dt) {
+    const v = this.viewOffset;
+    const k = Math.min(dt * 5, 1);
+    v.x += (v.tx - v.x) * k;
+    v.y += (v.ty - v.y) * k;
+    const w = this.container.clientWidth, h = this.container.clientHeight;
+    if (Math.abs(v.x) < 0.5 && Math.abs(v.y) < 0.5) {
+      if (this.camera.view?.enabled) this.camera.clearViewOffset();
+    } else {
+      this.camera.setViewOffset(w, h, v.x, v.y, w, h);
+    }
+  }
+
   #resize() {
     const w = this.container.clientWidth, h = this.container.clientHeight;
     this.camera.aspect = w / h;
@@ -143,7 +174,7 @@ export class Cosmos {
     const rnd = mulberry32(7);
 
     // Distant stars on a shell.
-    const starCount = 7000;
+    const starCount = LOW_POWER ? 4000 : 7000;
     const pos = new Float32Array(starCount * 3), col = new Float32Array(starCount * 3);
     const tint = [new THREE.Color('#ffffff'), new THREE.Color('#a9c8ff'), new THREE.Color('#ffe2b8'), new THREE.Color('#c9b8ff')];
     for (let i = 0; i < starCount; i++) {
@@ -161,7 +192,7 @@ export class Cosmos {
     })));
 
     // Spiral galaxy dust in the disk the cores live in.
-    const dustCount = 26000, arms = 2;
+    const dustCount = LOW_POWER ? 13000 : 26000, arms = 2;
     const dp = new Float32Array(dustCount * 3), dc = new Float32Array(dustCount * 3);
     const inner = new THREE.Color('#ffd9a8'), outer = new THREE.Color('#5a7dff'), pink = new THREE.Color('#ff7ad9');
     for (let i = 0; i < dustCount; i++) {
@@ -443,16 +474,22 @@ export class Cosmos {
     this.pointer = new THREE.Vector2();
     let downAt = null;
     const el = this.renderer.domElement;
-    el.addEventListener('pointermove', (e) => {
+    const track = (e) => {
       const r = el.getBoundingClientRect();
       this.pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
       this.pointerScreen = { x: e.clientX, y: e.clientY };
+    };
+    el.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'touch') return; // no hover on touch screens
+      track(e);
       this.#updateHover();
     });
-    el.addEventListener('pointerdown', (e) => { downAt = { x: e.clientX, y: e.clientY }; });
+    el.addEventListener('pointerdown', (e) => { downAt = { x: e.clientX, y: e.clientY, multi: !e.isPrimary }; });
     el.addEventListener('pointerup', (e) => {
-      if (!downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 5) return;
-      const hit = this.#pick();
+      const touch = e.pointerType === 'touch';
+      if (!downAt || downAt.multi || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > (touch ? 10 : 5)) return;
+      track(e);
+      const hit = this.#pick(touch ? 30 : 12);
       if (hit) this.handlers.select(hit.object.userData);
     });
     el.addEventListener('pointerleave', () => this.#setHover(null));
@@ -463,17 +500,32 @@ export class Cosmos {
     return true;
   }
 
-  #pick() {
+  // Exact ray hit first; otherwise the nearest core/leaf on screen within
+  // `slop` px, so small leaves are still easy to tap with a finger.
+  #pick(slop = 0) {
     this.raycaster.setFromCamera(this.pointer, this.camera);
     const targets = [];
     for (const n of this.nodes.values()) {
       targets.push(n.core);
       for (const l of n.leaves) if (this.#isShown(l.mesh) && l.mesh.material.opacity > 0.3) targets.push(l.mesh);
     }
-    if (this.state.showBridges) for (const b of this.bridges) targets.push(b.hit);
     const hits = this.raycaster.intersectObjects(targets, false);
-    // Prefer leaves/cores over the fat invisible bridge hit-tubes.
-    return hits.find((h) => h.object.userData.kind !== 'bridge') ?? hits[0] ?? null;
+    if (hits.length) return hits[0];
+
+    if (slop && this.pointerScreen) {
+      const r = this.renderer.domElement.getBoundingClientRect();
+      const v = new THREE.Vector3();
+      let best = null, bestD = slop;
+      for (const obj of targets) {
+        obj.getWorldPosition(v).project(this.camera);
+        if (v.z > 1) continue;
+        const d = Math.hypot(r.left + (v.x + 1) / 2 * r.width - this.pointerScreen.x, r.top + (1 - v.y) / 2 * r.height - this.pointerScreen.y);
+        if (d < bestD) { bestD = d; best = obj; }
+      }
+      if (best) return { object: best };
+    }
+    if (!this.state.showBridges) return null;
+    return this.raycaster.intersectObjects(this.bridges.filter((b) => b.group.visible).map((b) => b.hit), false)[0] ?? null;
   }
 
   #updateHover() {
@@ -502,7 +554,7 @@ export class Cosmos {
     const away = this.camera.position.clone().sub(this.controls.target).normalize();
     if (away.y < 0.15) away.y = 0.35;
     away.normalize();
-    const cam = target.clone().add(away.multiplyScalar(node.radius * 2 + 26));
+    const cam = target.clone().add(away.multiplyScalar((node.radius * 2 + 26) * this.#fit(0.5)));
     if (instant) {
       this.tween = null;
       this.camera.position.copy(cam);
@@ -517,7 +569,7 @@ export class Cosmos {
     if (!leaf) return;
     const target = leaf.mesh.getWorldPosition(new THREE.Vector3());
     const away = target.clone().sub(node.group.position).normalize();
-    this.#flyTo(target.clone().add(away.multiplyScalar(9)).add(new THREE.Vector3(0, 2, 0)), target);
+    this.#flyTo(target.clone().add(away.multiplyScalar(9 * this.#fit(0.5))).add(new THREE.Vector3(0, 2, 0)), target);
   }
 
   focusBridge(bridge) {
@@ -525,13 +577,13 @@ export class Cosmos {
     if (!b) return;
     const mid = b.curve.getPoint(0.5);
     const span = b.curve.v0.distanceTo(b.curve.v2);
-    this.#flyTo(mid.clone().add(new THREE.Vector3(0, span * 0.35, span * 0.9 + 15)), mid);
+    this.#flyTo(mid.clone().add(new THREE.Vector3(0, span * 0.35, span * 0.9 + 15).multiplyScalar(this.#fit())), mid);
   }
 
   overview() {
     this.state.focus = null;
     this.applyFilters();
-    this.#flyTo(OVERVIEW.cam.clone(), OVERVIEW.target.clone());
+    this.#flyTo(this.#overviewCam(), OVERVIEW.target.clone());
   }
 
   setSizeMode(mode) {
@@ -625,6 +677,7 @@ export class Cosmos {
       for (const s of b.sparks) s.position.copy(b.curve.getPoint((s.userData.offset + time * 0.08) % 1));
     }
 
+    this.#applyViewOffset(dt);
     this.controls.update();
     this.composer.render();
     this.labelRenderer.render(this.scene, this.camera);

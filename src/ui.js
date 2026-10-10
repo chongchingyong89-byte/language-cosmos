@@ -15,6 +15,10 @@ function saveNotes(notes) {
 }
 
 const CAT_IDS = Object.keys(CATEGORIES);
+// Keep in sync with the mobile breakpoints in style.css.
+const MOBILE_Q = matchMedia('(max-width: 760px), (max-height: 520px)');
+const LANDSCAPE_Q = matchMedia('(max-height: 520px) and (orientation: landscape)');
+const PEEK_PX = 132;
 
 const badge = (evId) => {
   const ev = EVIDENCE[evId] ?? EVIDENCE.speculative;
@@ -37,6 +41,7 @@ export class UI {
     this.#buildList();
     this.#buildLegend();
     this.#bindKeys();
+    this.#initChrome();
     this.showIntro();
 
     cosmos.on('hover', (data, at) => this.#tooltip(data, at));
@@ -48,6 +53,7 @@ export class UI {
       if (!this.byId.has(id) || id === this.cosmos.state.focus) return;
       this.cosmos.focusLanguage(id, { instant });
       this.showLanguage(id);
+      if (this.sheetState === 'peek') this.setSheet('half', { silent: true });
     };
     window.addEventListener('hashchange', () => fromHash(false));
     fromHash(true);
@@ -60,6 +66,7 @@ export class UI {
   select(data) {
     if (!data) return;
     this.#setHash(data.langId ?? '');
+    this.closeOverlays();
     if (data.kind === 'core') this.sound.selectCore(this.byId.get(data.langId).lexicon.n);
     else if (data.kind === 'leaf') this.sound.selectLeaf(CAT_IDS.indexOf(data.item.category), EVIDENCE[data.item.evidence]?.rank, data.item.type === 'concept');
     else if (data.kind === 'bridge') this.sound.bridge();
@@ -73,6 +80,131 @@ export class UI {
       this.cosmos.focusBridge(data.bridge);
       this.showBridge(data.bridge);
     }
+    if (this.sheetState === 'peek') this.setSheet('half');
+  }
+
+  // ── Mobile chrome: top-bar buttons, overlays, bottom sheet, view insets ──
+  get #sheetMode() { return MOBILE_Q.matches && !LANDSCAPE_Q.matches; }
+
+  #initChrome() {
+    $('#btn-list').addEventListener('click', () => this.openOverlay('#list'));
+    $('#btn-filters').addEventListener('click', () => this.openOverlay('#legend'));
+    $('#btn-home').addEventListener('click', () => { this.closeOverlays(); this.home(); });
+    $('#btn-sound').addEventListener('click', () => this.toggleSound());
+    $('#scrim').addEventListener('click', () => this.closeOverlays());
+    for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => this.closeOverlays());
+    this.#syncSoundButton();
+
+    this.sheetState = 'peek';
+    this.#initSheetDrag();
+    const relayout = () => this.setSheet(this.sheetState, { silent: true });
+    window.addEventListener('resize', relayout);
+    MOBILE_Q.addEventListener('change', relayout);
+    LANDSCAPE_Q.addEventListener('change', relayout);
+    relayout();
+  }
+
+  openOverlay(sel) {
+    this.sound.click();
+    this.closeOverlays();
+    $(sel).classList.add('open');
+    const scrim = $('#scrim');
+    scrim.hidden = false;
+    requestAnimationFrame(() => scrim.classList.add('show'));
+  }
+
+  closeOverlays() {
+    const open = document.querySelectorAll('.overlay.open');
+    if (!open.length) return false;
+    for (const o of open) o.classList.remove('open');
+    const scrim = $('#scrim');
+    scrim.classList.remove('show');
+    setTimeout(() => { if (!scrim.classList.contains('show')) scrim.hidden = true; }, 300);
+    document.activeElement?.blur?.();
+    return true;
+  }
+
+  #sheetOffsets() {
+    const h = $('#panel').offsetHeight;
+    return { peek: Math.max(h - PEEK_PX, 0), half: Math.max(h - window.innerHeight * 0.52, 0), full: 0 };
+  }
+
+  setSheet(state, { silent = false } = {}) {
+    const panel = $('#panel');
+    this.sheetState = state;
+    panel.dataset.state = state;
+    if (this.#sheetMode) {
+      panel.style.transform = `translateY(${this.#sheetOffsets()[state]}px)`;
+      if (!silent) this.sound.click();
+    } else {
+      panel.style.transform = '';
+    }
+    this.#updateInsets();
+  }
+
+  #initSheetDrag() {
+    const panel = $('#panel'), handle = panel.querySelector('.sheet-handle');
+    let drag = null;
+    handle.addEventListener('pointerdown', (e) => {
+      if (!this.#sheetMode) return;
+      drag = { y0: e.clientY, off0: this.#sheetOffsets()[this.sheetState], t0: performance.now(), y: e.clientY };
+      panel.classList.add('dragging');
+      handle.setPointerCapture(e.pointerId);
+    });
+    handle.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      drag.y = e.clientY;
+      const off = Math.min(Math.max(drag.off0 + e.clientY - drag.y0, 0), this.#sheetOffsets().peek);
+      panel.style.transform = `translateY(${off}px)`;
+    });
+    const end = () => {
+      if (!drag) return;
+      panel.classList.remove('dragging');
+      const dy = drag.y - drag.y0;
+      const offs = this.#sheetOffsets();
+      const order = ['full', 'half', 'peek'];
+      let next;
+      if (Math.abs(dy) < 6) {
+        next = this.sheetState === 'peek' ? 'half' : this.sheetState === 'half' ? 'full' : 'half';
+      } else {
+        // A quick flick moves one stop; a slow drag snaps to the nearest stop.
+        const v = dy / Math.max(performance.now() - drag.t0, 1);
+        const i = order.indexOf(this.sheetState);
+        if (Math.abs(v) > 0.6) next = order[Math.min(Math.max(i + Math.sign(dy), 0), 2)];
+        else {
+          const off = drag.off0 + dy;
+          next = order.reduce((a, b) => (Math.abs(offs[b] - off) < Math.abs(offs[a] - off) ? b : a));
+        }
+      }
+      drag = null;
+      this.setSheet(next);
+    };
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
+    handle.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      this.setSheet(this.sheetState === 'full' ? 'peek' : this.sheetState === 'peek' ? 'half' : 'full');
+    });
+  }
+
+  // Tell the 3D view which screen edges are covered, so the focused star
+  // is centred in the part you can actually see.
+  #updateInsets() {
+    const W = window.innerWidth, H = window.innerHeight;
+    const rect = (sel) => $(sel).getBoundingClientRect();
+    if (this.#sheetMode) {
+      const visible = $('#panel').offsetHeight - this.#sheetOffsets()[this.sheetState];
+      this.cosmos.setViewInset({ top: rect('#hud').bottom, bottom: visible });
+    } else if (MOBILE_Q.matches) {
+      this.cosmos.setViewInset({ right: W - rect('#panel').left });
+    } else {
+      this.cosmos.setViewInset({ left: rect('#list').right, right: W - rect('#panel').left, bottom: H - rect('#legend').top });
+    }
+  }
+
+  #syncSoundButton() {
+    $('#btn-sound').classList.toggle('off', !this.sound.enabled);
   }
 
   // ── Left: searchable language list ───────────────────────────────────────
@@ -154,7 +286,7 @@ export class UI {
     const soundBox = $('#toggle-sound'), vol = $('#volume');
     soundBox.checked = this.sound.enabled;
     vol.value = this.sound.volume;
-    soundBox.addEventListener('change', () => this.sound.setEnabled(soundBox.checked));
+    soundBox.addEventListener('change', () => { this.sound.setEnabled(soundBox.checked); this.#syncSoundButton(); });
     vol.addEventListener('input', () => this.sound.setVolume(Number(vol.value)));
   }
 
@@ -162,6 +294,7 @@ export class UI {
     const box = $('#toggle-sound');
     box.checked = !box.checked;
     this.sound.setEnabled(box.checked);
+    this.#syncSoundButton();
   }
 
   home() {
@@ -170,6 +303,7 @@ export class UI {
     this.cosmos.overview();
     this.showIntro();
     this.#renderList();
+    this.setSheet('peek', { silent: true });
   }
 
   #bindKeys() {
@@ -178,8 +312,12 @@ export class UI {
         if (e.key === 'Escape') e.target.blur();
         return;
       }
-      if (e.key === 'Escape') this.home();
-      if (e.key === '/') { e.preventDefault(); $('#search').focus(); }
+      if (e.key === 'Escape' && !this.closeOverlays()) this.home();
+      if (e.key === '/') {
+        e.preventDefault();
+        if (MOBILE_Q.matches) this.openOverlay('#list');
+        $('#search').focus();
+      }
       if (e.key === 'm' || e.key === 'M') this.toggleSound();
     });
   }
@@ -212,7 +350,7 @@ export class UI {
 
   // ── Right panel views ────────────────────────────────────────────────────
   #panel(html) {
-    const p = $('#panel');
+    const p = $('#panel-body');
     p.innerHTML = html;
     p.scrollTop = 0;
     for (const el of p.querySelectorAll('[data-lang]')) {
@@ -224,14 +362,17 @@ export class UI {
   showIntro() {
     const nLeaves = this.languages.reduce((s, l) => s + this.cosmos.itemsFor(l).length, 0);
     this.#panel(`
-      <h2>How to read this universe</h2>
+      <h2>Explore the language universe</h2>
+      <p class="lead"><span class="only-mouse">Click a star · drag to orbit · scroll to zoom</span><span class="only-touch">Tap a star · drag to orbit · pinch to zoom</span></p>
+      <h3>How to read it</h3>
       <p>Each glowing <b>core</b> is a language. Its <b>volume</b> is proportional to its vocabulary (dictionary headwords), or to its speakers if you switch the size mode.
       Cores cluster by <b>family</b>, and the coloured nebula behind a cluster marks the family.</p>
       <p>Every core grows <b>branches</b> in eight fixed directions, one per trait domain. The leaves are linguistic features (●) or culture-key words (◆) with a claimed effect on how speakers think, feel or act.</p>
       <ul class="howto">
         <li><b>Leaf size</b> shows strength of evidence. A <b>wireframe</b> leaf is speculative.</li>
         <li><b>Gold arcs</b> between cores are <b>bilingual studies</b>, where the <em>same person</em> shifts when switching language. This is the cleanest evidence that language and personality are linked.</li>
-        <li>Click a core or leaf, or a name on the left. Press <kbd>Esc</kbd> to return to the overview and <kbd>/</kbd> to search. Shift-click a domain to show only that one.</li>
+        <li class="only-mouse">Click a core or leaf, or a name on the left. Press <kbd>Esc</kbd> to return to the overview, <kbd>/</kbd> to search and <kbd>M</kbd> to mute. Shift-click a domain to show only that one.</li>
+        <li class="only-touch">Use the search button to find a language and the sliders button for filters. Drag this sheet up for details, or down to see more of the sky.</li>
       </ul>
       <h3>Evidence scale</h3>
       <div class="ev-scale">${Object.entries(EVIDENCE).reverse().map(([id, e]) => `<div>${badge(id)}<span>${esc(e.desc)}</span></div>`).join('')}</div>

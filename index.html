@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#02030a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Language Cosmos</title>
   <meta name="description" content="A 3D universe of languages and how each one may shape attitude, creativity, conservatism and personality.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,13 +26,32 @@
   <div id="loading">Igniting the language cosmos…</div>
 
   <header id="hud">
-    <h1>语言宇宙 <span>Language Cosmos</span></h1>
-    <p>Languages as stars. Their branches are the ways they may shape the mind.</p>
+    <div class="brand">
+      <h1>语言宇宙 <span>Language Cosmos</span></h1>
+      <p>Languages as stars. Their branches are the ways they may shape the mind.</p>
+    </div>
+    <nav class="hud-actions" aria-label="Quick actions">
+      <button id="btn-list" class="icon-btn" aria-label="Languages">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+      </button>
+      <button id="btn-filters" class="icon-btn" aria-label="Filters and settings">
+        <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+      </button>
+      <button id="btn-sound" class="icon-btn" aria-label="Sound on/off">
+        <svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="mute" d="m16 9.5 5 5m0-5-5 5"/></svg>
+      </button>
+      <button id="btn-home" class="icon-btn" aria-label="Overview">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg>
+      </button>
+    </nav>
   </header>
 
-  <aside id="list" class="glass">
+  <div id="scrim" hidden></div>
+
+  <aside id="list" class="glass overlay" aria-label="Languages">
+    <div class="overlay-head"><b>Languages</b><button class="close" data-close aria-label="Close">✕</button></div>
     <div class="list-tools">
-      <input id="search" type="search" placeholder="Search language or family  /" autocomplete="off">
+      <input id="search" type="search" placeholder="Search language or family" autocomplete="off" enterkeyhint="go">
       <select id="sort" title="Sort by">
         <option value="lexicon">Vocabulary</option>
         <option value="speakers">Speakers</option>
@@ -40,9 +62,13 @@
     <ul id="lang-list"></ul>
   </aside>
 
-  <aside id="panel" class="glass"></aside>
+  <aside id="panel" class="glass" data-state="peek" aria-label="Details">
+    <div class="sheet-handle" role="button" aria-label="Expand or collapse details" tabindex="0"><span></span></div>
+    <div id="panel-body"></div>
+  </aside>
 
-  <footer id="legend" class="glass">
+  <footer id="legend" class="glass overlay" aria-label="Filters and settings">
+    <div class="overlay-head"><b>Filters &amp; settings</b><button class="close" data-close aria-label="Close">✕</button></div>
     <div id="cat-filter" class="chips"></div>
     <div class="controls">
       <label>Core size
