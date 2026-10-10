@@ -32,6 +32,7 @@ export class Explorer {
     this.passport = new Set(store.get('passport', []));
     this.badges = new Set(store.get('badges', []));
     this.tourIndex = null;
+    window.speechSynthesis?.getVoices(); // start loading voices early
     this.games = new Games(this.sound, { onFinish: (g, score, total) => this.#gameDone(g, score, total) });
 
     $('#mode-toggle').addEventListener('click', () => this.setMode(this.active ? 'research' : 'kids'));
@@ -190,21 +191,56 @@ export class Explorer {
   }
 
   // ── Speech ───────────────────────────────────────────────────────────────
-  speak(id) {
+  // Voices load asynchronously (Android Chrome often returns an empty list at
+  // first), and Android still reports some languages under legacy codes.
+  #voices() {
+    const synth = window.speechSynthesis;
+    const now = synth.getVoices();
+    if (now.length) return Promise.resolve(now);
+    return new Promise((resolve) => {
+      const done = () => resolve(synth.getVoices());
+      synth.addEventListener('voiceschanged', done, { once: true });
+      setTimeout(done, 1500);
+    });
+  }
+
+  async speak(id) {
     const g = GREETINGS[id];
     const synth = window.speechSynthesis;
-    if (!g?.speak || !synth) return this.toast('🔇 This device has no voice for this language. Try reading it out loud!');
-    const voices = synth.getVoices();
-    const find = (code) => voices.find((v) => v.lang.toLowerCase() === code.toLowerCase())
-      ?? voices.find((v) => v.lang.toLowerCase().startsWith(code.toLowerCase()));
-    const voice = find(g.speak) ?? (g.fallback && find(g.fallback));
-    if (!voice) return this.toast(`🔇 No ${this.byId.get(id).name} voice on this device. Try reading it out loud!`);
+    if (!g?.speak || !synth) return this.toast('🔇 This browser can\'t speak. Try reading it out loud!');
+    const btn = $('#panel-body [data-speak]');
+    btn?.classList.add('speaking');
+
+    const voices = await this.#voices();
+    const ALIAS = { he: ['iw'], id: ['in'], 'zh-hk': ['yue-hk', 'yue', 'zh-yue'] };
+    const codes = [g.speak, g.fallback].filter(Boolean).flatMap((c) => {
+      const lc = c.toLowerCase(), base = lc.split('-')[0];
+      return [lc, ...(ALIAS[lc] ?? []), ...(ALIAS[base] ?? []).map((a) => lc.replace(base, a)), base, ...(ALIAS[base] ?? [])];
+    });
+    const norm = (v) => v.lang.toLowerCase().replace('_', '-');
+    let voice = null;
+    for (const c of codes) {
+      voice = voices.find((v) => norm(v) === c) ?? voices.find((v) => norm(v).startsWith(`${c}-`));
+      if (voice) break;
+    }
+    // Skip voices of a different language, e.g. a Mandarin voice for Cantonese.
+    if (id === 'yue' && voice && !/hk|yue/.test(norm(voice))) voice = null;
+
     synth.cancel();
     const u = new SpeechSynthesisUtterance(g.text);
-    u.voice = voice;
-    u.lang = voice.lang;
+    u.lang = voice?.lang ?? g.speak; // no listed voice: let the engine try (Android often can)
+    if (voice) u.voice = voice;
     u.rate = 0.85;
+    let started = false;
+    const fail = () => {
+      btn?.classList.remove('speaking');
+      if (!started) this.toast(`🔇 No ${this.byId.get(id).name} voice on this device yet. You can add one in your phone's Text-to-speech settings.`);
+    };
+    u.onstart = () => { started = true; };
+    u.onend = () => btn?.classList.remove('speaking');
+    u.onerror = fail;
     synth.speak(u);
+    setTimeout(() => { if (!started && !synth.speaking) { synth.cancel(); fail(); } }, 3000);
   }
 
   // ── Passport & badges ────────────────────────────────────────────────────
