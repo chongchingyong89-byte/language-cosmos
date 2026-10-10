@@ -8,6 +8,12 @@ import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 export const HEROINE_URL = 'assets/heroine.vrm';
 export const HEROINE_CREDIT = 'Heroine: "VRM1_Constraint_Twist_Sample" © 2022 pixiv Inc., VRM Public License 1.0';
 
+// The scene's camera, so ink outlines can stay ~1.3 px wide at any distance
+// (the model's own 0.8 mm outline turns into broken dots on phone screens).
+const view = { camera: null, px: 1000 };
+export function setOutlineView(camera, pxHeight) { view.camera = camera; view.px = pxHeight; }
+const _head = new THREE.Vector3();
+
 // One heroine for the whole session, carried between the street and the shop.
 let shared = null;
 export function getHeroine(onProgress) {
@@ -15,22 +21,50 @@ export function getHeroine(onProgress) {
   return shared;
 }
 
+// The file is read once (THREE.Cache keeps the bytes); every extra person
+// (clerk, shoppers) also reuses the first model's textures on the GPU, so a
+// shop full of people costs little more memory than the heroine alone.
+THREE.Cache.enabled = true;
+let textureSource = null;
+
 export async function loadVrmHeroine(onProgress) {
   const loader = new GLTFLoader();
   loader.register((parser) => new VRMLoaderPlugin(parser));
   const gltf = await loader.loadAsync(HEROINE_URL, (e) => e.total && onProgress?.(e.loaded / e.total));
   const vrm = gltf.userData.vrm;
   VRMUtils.rotateVRM0(vrm);
+  const mats = new Map();
   vrm.scene.traverse((o) => {
     o.frustumCulled = false;
-    // Ink outlines show through the hair strands as dark streaks: drop them on hair only.
     for (const m of [o.material].flat()) {
-      if (m && /hair/i.test(m.name ?? '') && 'outlineWidthFactor' in m) m.outlineWidthFactor = 0;
+      if (!m) continue;
+      // Ink outlines show through the hair strands as dark streaks: drop them on hair only.
+      if (/hair/i.test(m.name ?? '') && 'outlineWidthFactor' in m) m.outlineWidthFactor = 0;
+      mats.set(`${m.name}|${m.isOutline ? 1 : 0}`, m);
     }
   });
+  if (!textureSource) textureSource = mats;
+  else shareTextures(mats, textureSource);
   const heroine = new VrmHeroine(vrm);
   heroine.settle();
   return heroine;
+}
+
+function shareTextures(mats, source) {
+  for (const [key, m] of mats) {
+    const src = source.get(key);
+    if (!src) continue;
+    // MToon keeps its textures in shader uniforms; standard materials as properties.
+    const slots = m.uniforms
+      ? Object.keys(m.uniforms).map((k) => [m.uniforms[k], src.uniforms?.[k], 'value'])
+      : Object.keys(m).map((k) => [m, src, k]);
+    for (const [own, theirs, prop] of slots) {
+      const t = own?.[prop], u = theirs?.[prop];
+      if (!t?.isTexture || !u?.isTexture || t === u) continue;
+      t.dispose();
+      own[prop] = u;
+    }
+  }
 }
 
 export class VrmHeroine {
@@ -47,6 +81,59 @@ export class VrmHeroine {
     this.#buildShadow();
     this.handPos = new THREE.Vector3();
     this.hipsY = this.bone('hips').position.y;
+    this.outlines = [];
+    vrm.scene.traverse((o) => {
+      for (const m of [o.material].flat()) if (m && m.outlineWidthFactor > 0) this.outlines.push(m);
+    });
+    this.#setupHair();
+  }
+
+  // Hair physics. Simulating in her own space (center = root) stops the hair
+  // being "left behind" when she moves, which lifted the crown off her head.
+  // Instead a gentle wind, stronger towards the tips, streams it back as she
+  // runs, and the joints at the scalp are stiffened so the top stays put.
+  #setupHair() {
+    this.hair = [];
+    const mgr = this.vrm.springBoneManager;
+    if (!mgr) return;
+    for (const j of mgr.joints) {
+      j.center = this.root;
+      const m = j.bone.name.match(/Hair(\d)_/);
+      if (!m) continue;
+      const depth = +m[1];
+      if (depth === 1) { j.settings.stiffness *= 5; j.settings.dragForce = Math.max(j.settings.dragForce, 0.6); }
+      else if (depth === 2) j.settings.stiffness *= 2;
+      this.hair.push({ j, k: Math.min(1, (depth - 1) / 3), pow: j.settings.gravityPower, dir: j.settings.gravityDir.clone() });
+    }
+    mgr.reset();
+  }
+
+  #hairWind(speed) {
+    const ry = this.root.rotation.y;
+    const wind = speed * 0.11;
+    const g = this._g ??= new THREE.Vector3();
+    for (const h of this.hair) {
+      g.copy(h.dir).multiplyScalar(h.pow);
+      g.x -= Math.sin(ry) * wind * h.k;
+      g.z -= Math.cos(ry) * wind * h.k;
+      g.y -= 0.04 * h.k * Math.min(speed, 1);
+      const p = g.length();
+      h.j.settings.gravityPower = p;
+      if (p > 1e-5) h.j.settings.gravityDir.copy(g).divideScalar(p);
+    }
+  }
+
+  #fitOutline() {
+    const cam = view.camera;
+    if (!cam || !this.outlines.length) return;
+    this.root.getWorldPosition(_head);
+    _head.y += 1.3;
+    const d = cam.position.distanceTo(_head);
+    const perPx = (2 * d * Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2)) / view.px;
+    const w = Math.min(Math.max(perPx * 1.3, 0.0008), 0.012);
+    if (Math.abs(w - (this.outlineW ?? 0)) < w * 0.05) return;
+    this.outlineW = w;
+    for (const m of this.outlines) m.outlineWidthFactor = w;
   }
 
   #buildUmbrella() {
@@ -59,15 +146,48 @@ export class VrmHeroine {
     crook.rotation.z = Math.PI;
     crook.position.set(0.035, 0, 0);
     this.umbrella.add(crook);
-    const canopyGeo = new THREE.ConeGeometry(0.62, 0.26, 8, 1, true);
-    const canopy = new THREE.Mesh(canopyGeo, new THREE.MeshPhysicalMaterial({
-      color: '#eaf4ff', transparent: true, opacity: 0.25, roughness: 0.05, side: THREE.DoubleSide, depthWrite: false,
-    }));
-    canopy.position.y = 0.98;
-    this.umbrella.add(canopy);
-    const ribs = new THREE.LineSegments(new THREE.EdgesGeometry(canopyGeo), new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7 }));
-    ribs.position.copy(canopy.position);
-    this.umbrella.add(ribs);
+    // Domed canopy (a spherical cap), with the vinyl sagging a little between
+    // the 8 curved ribs and a gently scalloped rim, like a real clear umbrella.
+    const R = 0.64, PHI = 0.9, RS = R / Math.sin(PHI), H = RS * (1 - Math.cos(PHI));
+    const profile = [];
+    for (let i = 0; i <= 12; i++) {
+      const p = (i / 12) * PHI;
+      profile.push(new THREE.Vector2(Math.max(RS * Math.sin(p), 0.001), RS * Math.cos(p) - RS));
+    }
+    const canopyGeo = new THREE.LatheGeometry(profile, 48);
+    const P = canopyGeo.attributes.position;
+    for (let i = 0; i < P.count; i++) {
+      const x = P.getX(i), y = P.getY(i), z = P.getZ(i);
+      const r = Math.hypot(x, z), a = Math.atan2(z, x);
+      const sag = Math.abs(Math.sin(4 * a)) * (r / R) ** 2;   // 0 on a rib, 1 mid-panel at the rim
+      const k = 1 - 0.05 * sag;
+      P.setXYZ(i, x * k, y - 0.035 * sag, z * k);
+    }
+    canopyGeo.computeVertexNormals();
+    const canopyGroup = new THREE.Group();
+    canopyGroup.add(new THREE.Mesh(canopyGeo, new THREE.MeshPhysicalMaterial({
+      color: '#eaf4ff', transparent: true, opacity: 0.22, roughness: 0.05, side: THREE.DoubleSide, depthWrite: false,
+    })));
+    const ribMat = new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.75 });
+    const ribPts = [];
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      for (let i = 0; i < profile.length - 1; i++) {
+        for (const v of [profile[i], profile[i + 1]]) ribPts.push(new THREE.Vector3(Math.cos(a) * v.x, v.y, Math.sin(a) * v.x));
+      }
+    }
+    canopyGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ribPts), ribMat));
+    const rim = [];
+    for (let i = 0; i <= 96; i++) {
+      const a = (i / 96) * Math.PI * 2, sag = Math.abs(Math.sin(4 * a));
+      rim.push(new THREE.Vector3(Math.cos(a) * R * (1 - 0.05 * sag), -H - 0.035 * sag, Math.sin(a) * R * (1 - 0.05 * sag)));
+    }
+    canopyGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(rim), ribMat));
+    const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.01, 0.06, 6), handle.material);
+    tip.position.y = 0.03;
+    canopyGroup.add(tip);
+    this.canopyLift = H - 0.12;   // the rim sits a little below the top of the shaft
+    this.umbrella.add(canopyGroup);
     this.root.add(this.umbrella);
   }
 
@@ -220,6 +340,8 @@ export class VrmHeroine {
       em.setValue('blink', this.smileT > 0 ? 0 : blink);
     }
 
+    this.#hairWind(s);
+    this.#fitOutline();
     this.vrm.update(dt); // also runs hair/skirt spring bones
 
     // Umbrella: shaft from her hand to a point above her head, so the canopy
@@ -237,7 +359,7 @@ export class VrmHeroine {
     this.umbrella.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
     this.umbrella.children[0].scale.y = len / 0.95;
     this.umbrella.children[0].position.y = len / 2;
-    this.umbrella.children[2].position.y = this.umbrella.children[3].position.y = len;
+    this.umbrella.children[2].position.y = len + this.canopyLift;
 
     return s > 0.3 && Math.floor((this.phase - Math.PI / 2) / Math.PI) !== prevStep;
   }

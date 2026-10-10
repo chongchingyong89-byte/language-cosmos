@@ -4,8 +4,6 @@
 import { SHOPS } from './registry.js';
 import { chibi, chibiSvg } from './chibi.js';
 import { Rain } from './rain.js';
-import { StreetWorld, READABLES } from '../world/street.js';
-import { InteriorWorld, SHOP_WORDS } from '../world/interior.js';
 import { Checkout } from './checkout.js';
 import { RECORDINGS } from './music.js';
 
@@ -307,13 +305,14 @@ export class ShopGame {
     this.#closeWorld();
     this.shop = shop;
     this.found ??= new Set(store.get(`words-${shop.id}`, []));
-    const total = READABLES.length;
+    const W = shop.world;
+    const total = W.streetWords.length;
     this.#show(`
       <div class="world">
         <div class="world-canvas"></div>
         <div class="world-hud">
           <span class="hud-pill">📖 <b class="w-found">${this.found.size}</b>/${total} words</span>
-          <span class="hud-pill hud-weather">☔ <b>ざあざあ</b> <small>pouring rain</small></span>
+          <span class="hud-pill hud-weather">${W.weather}</span>
         </div>
         <button class="shop-x" data-close aria-label="Close">✕</button>
         <div class="read-card" hidden></div>
@@ -323,9 +322,9 @@ export class ShopGame {
         <div class="world-hint"><span class="only-mouse">WASD / arrows to walk · Shift to run · drag to look</span><span class="only-touch">Joystick to walk · drag to look</span> · <button class="link-btn" data-skip>Skip into the shop ▶</button></div>
         <div class="world-title ${spawn === 'start' ? '' : 'gone'}">
           <div class="wt-inner">
-            <div class="wt-jp">あまやどり</div>
-            <div class="wt-sub">A rainy night in Tokyo</div>
-            <p>Walk the wet street and find <b>${total} Japanese words</b> on signs, shops and the road. Then step through the glowing door to do Mum's shopping at the konbini.</p>
+            <div class="wt-jp">${esc(W.title)}</div>
+            <div class="wt-sub">${esc(W.sub)}</div>
+            <p>${W.blurb(total)}</p>
             <button class="kid-btn" data-go>Start walking ▶</button>
             <div class="wt-loading"></div>
             <div class="wt-credit">Heroine: VRM sample model © 2022 pixiv Inc. (VRM Public License 1.0)</div>
@@ -333,7 +332,7 @@ export class ShopGame {
         </div>
       </div>`);
     const wrap = $('.world', this.root);
-    this.world = new StreetWorld($('.world-canvas', wrap), {
+    this.world = new W.Street($('.world-canvas', wrap), {
       sound: this.sound,
       found: this.found,
       onDiscover: (r, n) => this.#discover(r, n, total, 'words'),
@@ -346,7 +345,7 @@ export class ShopGame {
     };
     this.world.start();
     window.__world = this.world; // handy for debugging from the console
-    this.sound.setRain(0.85);
+    this.sound.setRain(W.rain);
     this.#music('street');
     $('[data-go]', wrap).addEventListener('click', () => { this.sound.click(); $('.world-title', wrap).classList.add('gone'); });
     $('[data-skip]', wrap).addEventListener('click', () => this.#enterShop());
@@ -378,13 +377,14 @@ export class ShopGame {
     this.shopFound ??= new Set(store.get(`shopwords-${shop.id}`, []));
     this.list = shop.shoppingList();
     this.basket = new Map();
-    const total = SHOP_WORDS.length;
+    const W = shop.world;
+    const total = W.shopWords.length;
     this.#show(`
       <div class="world interior">
         <div class="world-canvas"></div>
         <div class="world-hud">
           <span class="hud-pill">📖 <b class="w-found">${this.shopFound.size}</b>/${total} shop words</span>
-          <span class="hud-pill">🧺 <b class="w-basket">0</b> · ¥<b class="w-total">0</b></span>
+          <span class="hud-pill">🧺 <b class="w-basket">0</b> · <b class="w-total">${shop.till.short(0)}</b></span>
         </div>
         <button class="shop-x" data-close aria-label="Close">✕</button>
         <div class="shop-list"></div>
@@ -393,11 +393,11 @@ export class ShopGame {
         <div class="world-toast" hidden></div>
         <div class="music-chip"></div>
         <div class="joy" aria-label="Move"><i></i></div>
-        <div class="world-hint"><span class="only-mouse">Walk to a shelf · <kbd>E</kbd> take · <kbd>Q</kbd> put back</span><span class="only-touch">Walk to a shelf and tap Take</span> · <button class="link-btn" data-night>👔 Work the night shift</button></div>
+        <div class="world-hint"><span class="only-mouse">Walk to a shelf · <kbd>E</kbd> take · <kbd>Q</kbd> put back</span><span class="only-touch">Walk to a shelf and tap Take</span> · <button class="link-btn" data-night>${W.shift}</button></div>
       </div>`);
     const wrap = $('.world', this.root);
     this.#renderList();
-    this.world = new InteriorWorld($('.world-canvas', wrap), {
+    this.world = new W.Interior($('.world-canvas', wrap), {
       sound: this.sound,
       found: this.shopFound,
       items: shop.items,
@@ -412,7 +412,7 @@ export class ShopGame {
     };
     this.world.start();
     window.__world = this.world;
-    this.sound.setRain(0.25); // the rain, muffled through the glass
+    this.sound.setRain(W.insideRain); // the rain, muffled through the glass
     this.sound.chime();
     this.#music('shop');
     $('[data-night]', wrap).addEventListener('click', () => { this.#closeWorld(); this.startNight(); });
@@ -437,14 +437,13 @@ export class ShopGame {
   #renderList() {
     const el = $('.shop-list', this.root);
     if (!el) return;
-    const C = this.shop.counters;
-    el.innerHTML = `<div class="sl-head">📝 お母さんのメモ <small>Mum's list</small><button class="sl-en" data-en title="Show meanings">EN</button></div>
+    el.innerHTML = `<div class="sl-head">📝 ${esc(this.shop.world.listTitle)} <small>Mum's list</small><button class="sl-en" data-en title="Show meanings">EN</button></div>
       ${this.list.map((l) => {
         const it = this.shop.items[l.item];
         const got = this.basket.get(l.item) ?? 0;
         return `<div class="sl-line ${got === l.q ? 'done' : got > l.q ? 'over' : ''}">
           <span class="sl-check">${got === l.q ? '✓' : got > l.q ? '!' : '○'}</span>
-          <span class="sl-text"><b>${esc(l.text)}</b><small>${esc(l.reading)}</small><i class="sl-mean">${l.q} × ${esc(it.en)} · ${C[it.counter].kanji} = ${esc(C[it.counter].rule.split(':')[0])}</i></span>
+          <span class="sl-text"><b>${esc(l.text)}</b><small>${esc(l.reading)}</small><i class="sl-mean">${l.q} × ${esc(it.en)} · ${esc(this.shop.listLine(l.item, l.q).rule)}</i></span>
           <span class="sl-got">${got}/${l.q}</span>
         </div>`;
       }).join('')}`;
@@ -452,7 +451,7 @@ export class ShopGame {
     const yen = [...this.basket].reduce((a, [id, q]) => a + this.shop.items[id].price * q, 0);
     const b = $('.w-basket', this.root), t = $('.w-total', this.root);
     if (b) b.textContent = n;
-    if (t) t.textContent = yen;
+    if (t) t.textContent = this.shop.till.short(yen);
   }
 
   #zonePrompt(z) {
@@ -463,14 +462,16 @@ export class ShopGame {
     el.hidden = false;
     if (z.type === 'till') {
       const empty = !this.basket.size;
-      el.innerHTML = `<span class="zp-label">🛎️ <b>レジ</b> <small>reji · the till</small></span>
+      const T = this.shop.world.till;
+      el.innerHTML = `<span class="zp-label">🛎️ <b>${esc(T.text)}</b> <small>${esc(T.reading)} · the till</small></span>
         <button class="kid-btn" data-pay ${empty ? 'disabled' : ''}>${empty ? 'Your basket is empty' : 'Pay at the till ▶'}</button>`;
       $('[data-pay]', el)?.addEventListener('click', () => this.#openCheckout());
       return;
     }
     const it = this.shop.items[z.item];
     const got = this.basket.get(z.item) ?? 0;
-    el.innerHTML = `<span class="zp-label"><i>${it.emoji}</i> <b>${esc(it.jp)}</b> <small>${esc(it.romaji)} · ${esc(it.en)} · ¥${it.price}</small></span>
+    const name = it.jp ?? it.ms ?? it.zh;
+    el.innerHTML = `<span class="zp-label"><i>${it.emoji}</i> <b>${esc(name)}</b> <small>${it.romaji ? `${esc(it.romaji)} · ` : ''}${esc(it.en)} · ${this.shop.till.short(it.price)}</small></span>
       <button class="kid-btn ghost" data-take="-1" ${got ? '' : 'disabled'}>－ Put back</button>
       <button class="kid-btn" data-take="1">＋ Take${got ? ` (${got})` : ''}</button>`;
     for (const b of el.querySelectorAll('[data-take]')) b.addEventListener('click', () => this.#useZone(+b.dataset.take));
@@ -494,14 +495,13 @@ export class ShopGame {
     $('.zone-prompt', this.root).hidden = true;
     const shop = this.shop;
     this.checkout = new Checkout($('.world', this.root), {
-      items: shop.items, yen: shop.yen, counted: shop.counted, list: this.list, basket: this.basket, sound: this.sound,
+      till: shop.till, listLine: shop.listLine, items: shop.items, list: this.list, basket: this.basket, sound: this.sound,
       onDone: (r) => { this.checkout = null; this.#shopResult(r); },
     });
   }
 
   #shopResult(r) {
     const wrap = $('.world', this.root);
-    const C = this.shop.counters;
     const el = document.createElement('div');
     el.className = 'shop-result';
     el.innerHTML = `
@@ -509,17 +509,17 @@ export class ShopGame {
       <h2>${r.stars === 3 ? 'Perfect shopping trip!' : r.stars === 2 ? 'Mum will be happy!' : 'Oops, check Mum\'s list!'}</h2>
       <div class="sr-lines">${r.lines.map((l) => `<div class="${l.ok ? 'ok' : 'bad'}">
         <span>${l.ok ? '✅' : '❌'}</span>
-        <div><b>${esc(l.it.jp)} ${esc(l.c.jp)}</b> <small>${esc(l.c.kana)} · ${esc(l.c.romaji)}</small>
-        <p>${l.ok ? `Right! ${C[l.it.counter].kanji} counts ${esc(C[l.it.counter].rule.split(':')[0])}.` : `It meant <b>${l.q}</b>, and you took ${l.got}. ${C[l.it.counter].kanji} counts ${esc(C[l.it.counter].rule.split(':')[0])}.`}</p></div>
+        <div><b>${esc(l.text)}</b> ${l.reading ? `<small>${esc(l.reading)}</small>` : ''}
+        <p>${l.ok ? `Right! ${esc(l.rule)}.` : `It meant <b>${l.q}</b>, and you took ${l.got}. ${esc(l.rule)}.`}</p></div>
       </div>`).join('')}
       ${r.extras.length ? `<div class="bad"><span>🛒</span><div><p>Extra things not on the list: ${r.extras.map((id) => this.shop.items[id].emoji).join(' ')}</p></div></div>` : ''}</div>
       ${r.exact ? '<p class="co-tip">🎯 ぴったり! You paid the exact amount.</p>' : ''}
       <h3>Phrases from the till</h3>
-      <div class="learned">${r.learned.slice(0, 10).map((l) => `<div><b class="jp">${esc(l.jp)}</b><span>${esc(l.romaji ?? '')}</span><small>${esc(l.en ?? '')}</small></div>`).join('')}</div>
+      <div class="learned">${r.learned.slice(0, 10).map((l) => `<div><b class="jp">${esc(l.text)}</b><span>${esc(l.reading ?? '')}</span><small>${esc(l.en ?? '')}</small></div>`).join('')}</div>
       <div class="row">
         <button class="kid-btn" data-out>🚪 Walk back outside</button>
         <button class="kid-btn ghost" data-again>🧺 Shop again</button>
-        <button class="kid-btn ghost" data-night>👔 Work the night shift</button>
+        <button class="kid-btn ghost" data-night>${this.shop.world.shift}</button>
       </div>`;
     wrap.appendChild(el);
     requestAnimationFrame(() => el.classList.add('show'));
@@ -600,9 +600,12 @@ export class ShopGame {
   #sayJa(text) {
     const synth = window.speechSynthesis;
     if (!synth) return;
-    const voice = synth.getVoices().find((v) => v.lang.toLowerCase().startsWith('ja'));
+    // Malay voices are rare: Indonesian is close enough to read Malay aloud.
+    const want = { ja: ['ja'], ms: ['ms', 'id'], zh: ['zh-cn', 'zh'] }[this.shop?.lang ?? 'ja'] ?? [this.shop.lang];
+    const voices = synth.getVoices();
+    const voice = want.map((l) => voices.find((v) => v.lang.toLowerCase().replace('_', '-').startsWith(l))).find(Boolean);
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = voice?.lang ?? 'ja-JP';
+    u.lang = voice?.lang ?? { ja: 'ja-JP', ms: 'ms-MY', zh: 'zh-CN' }[this.shop?.lang] ?? 'ja-JP';
     if (voice) u.voice = voice;
     u.rate = 0.85;
     synth.cancel();

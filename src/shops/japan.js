@@ -2,6 +2,8 @@
 // Teaches: staff greetings & politeness, counter words (助数詞), prices read
 // in Japanese, katakana loanwords, konbini service questions, rain words.
 import { catSvg } from './chibi.js';
+import { StreetWorld, READABLES } from '../world/street.js';
+import { InteriorWorld, SHOP_WORDS } from '../world/interior.js';
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const shuffle = (a) => a.map((v) => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(([, v]) => v);
@@ -275,6 +277,54 @@ export function shoppingList() {
   });
 }
 
+// ── The till (3D shop): what the clerk says, coins, change ───────────────
+const L2 = (text, reading, en) => ({ text, reading, en });
+const YES = L2('はい、お願いします。', 'Hai, onegai shimasu.', 'Yes, please.');
+const NO = L2('いいえ、大丈夫です。', 'Iie, daijōbu desu.', "No, I'm fine (= no thanks).");
+const SERVICE_Q = {
+  heat: L2('温めますか？', 'Atatamemasu ka?', 'Shall I heat it up?'),
+  chopsticks: L2('お箸をおつけしますか？', 'Ohashi o otsuke shimasu ka?', 'Shall I add chopsticks?'),
+  spoon: L2('スプーンをおつけしますか？', 'Supūn o otsuke shimasu ka?', 'Shall I add a spoon?'),
+};
+export const TILL = {
+  clerk: { name: 'Clerk · 店員', look: { hair: '#2b1d14', style: 'short', outfit: '#22a387', legs: '#2b2f3a', acc: [] } },
+  greet: L2('いらっしゃいませ！', 'Irasshaimase!', 'Welcome!'),
+  questions: [
+    (ids, items) => {
+      const svc = ids.map((id) => items[id].service).find(Boolean);
+      if (!svc) return null;
+      return {
+        line: SERVICE_Q[svc], choices: [YES, NO],
+        after: (a) => ({ line: a === YES ? L2('かしこまりました。', 'Kashikomarimashita.', 'Certainly. (very polite "OK")') : L2('はい、かしこまりました。', 'Hai, kashikomarimashita.', 'Yes, certainly.') }),
+      };
+    },
+    () => ({
+      line: L2('袋はご利用ですか？', 'Fukuro wa go-riyō desu ka?', 'Would you like a bag?'), choices: [YES, NO],
+      after: (a) => (a === NO ? { line: L2('はい、ありがとうございます。', 'Hai, arigatō gozaimasu.', 'OK, thank you.'), tip: `💡 You just used <b>大丈夫です</b> ("I'm fine") to say <b>no thanks</b>. That's the indirect, polite Japanese way to say no!` } : null),
+    }),
+    () => ({
+      line: L2('ポイントカードはお持ちですか？', 'Pointo kādo wa omochi desu ka?', 'Do you have a point card?'),
+      choices: [L2('いいえ、持っていません。', 'Iie, motte imasen.', "No, I don't have one."), L2('はい。', 'Hai.', 'Yes.')],
+    }),
+  ],
+  price: (n) => { const p = yen(n); return L2(`${p.kanji}です。`, `${p.romaji} desu.`, 'The price, in Japanese. How much is it? Pay with the coins!'); },
+  short: (n) => `¥${n.toLocaleString('en')}`,
+  coins: [
+    { v: 1000, label: '1000', unit: '円', cls: 'note' }, { v: 500, label: '500', unit: '円', cls: 'c500' },
+    { v: 100, label: '100', unit: '円', cls: 'c100' }, { v: 50, label: '50', unit: '円', cls: 'c50' }, { v: 10, label: '10', unit: '円', cls: 'c10' },
+  ],
+  more: (d) => { const m = yen(d); return L2(`あと${m.kanji}です。`, `Ato ${m.romaji} desu.`, `${d} yen more, please. (あと = "still / more")`); },
+  change: (d) => { const c = yen(d); return { line: L2(`${c.kanji}のお返しです。`, `${c.romaji} no okaeshi desu.`, `Here's your change: ¥${d}.`), tip: '💡 <b>お返し</b> (okaeshi) means "change", literally "giving back".' }; },
+  exact: { line: L2('ちょうどお預かりします。', 'Chōdo oazukari shimasu.', 'Exactly right, thank you!'), tip: '🎯 <b>ぴったり!</b> (pittari, "spot on!"): you paid the exact amount.' },
+  thanks: L2('ありがとうございました！またお越しくださいませ。', 'Arigatō gozaimashita! Mata okoshi kudasaimase.', 'Thank you very much! Please come again.'),
+};
+
+// How a shopping-list line reads, and why (for the results screen).
+export function listLine(item, q) {
+  const it = ITEMS[item], c = counted(it.counter, q);
+  return { text: `${it.jp} ${c.jp}`, reading: `${c.kana} · ${c.romaji}`, rule: `${COUNTERS[it.counter].kanji} counts ${COUNTERS[it.counter].rule.split(':')[0]}` };
+}
+
 // ── Scene: a glowing konbini on a rainy street (SVG, viewBox 800×400) ──────
 function shelves(x0, y0, w, rows, seed) {
   let s = seed, out = '';
@@ -377,8 +427,14 @@ export const JAPAN = {
   staffSays: L.thanks,
   items: ITEMS,
   music: 'jp',
-  world: true,
-  shoppingList, counted, yen, counters: COUNTERS,
+  shoppingList, counted, yen, counters: COUNTERS, till: TILL, listLine,
+  world: {
+    Street: StreetWorld, Interior: InteriorWorld, streetWords: READABLES, shopWords: SHOP_WORDS,
+    title: 'あまやどり', sub: 'A rainy night in Tokyo', rain: 0.85, insideRain: 0.25,
+    blurb: (n) => `Walk the wet street and find <b>${n} Japanese words</b> on signs, shops and the road. Then step through the glowing door to do Mum's shopping at the konbini.`,
+    listTitle: 'お母さんのメモ', till: { text: 'レジ', reading: 'reji' }, shift: '👔 Work the night shift',
+    weather: '☔ <b>ざあざあ</b> <small>pouring rain</small>',
+  },
   snacks: Object.values(ITEMS).filter((i) => i.fav).map((i) => ({ emoji: i.emoji, native: i.jp, en: i.en })),
   scene, night, catSvg,
   intro: {

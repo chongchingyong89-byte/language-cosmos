@@ -37,7 +37,7 @@ export class StreetWorld extends World3D {
     this.onEnter = onEnter;
     this.entered = false;
     this.#buildWorld();
-    this.#buildRain();
+    this.addRain({ groundAt: (z) => (z < -1.5 || z > 6.6 ? 0.13 : 0.02) });
     if (spawn === 'door') this.spawnHero(new THREE.Vector3(0, 0, -4.2), 0);
     else this.spawnHero(new THREE.Vector3(13, 0, -3.4), -Math.PI / 2);
   }
@@ -256,26 +256,6 @@ export class StreetWorld extends World3D {
     this.scene.add(g);
   }
 
-  #buildRain() {
-    const n = LOW ? 1100 : 2400;
-    this.rainBox = { w: 26, h: 14, d: 22 };
-    const pos = new Float32Array(n * 6);
-    this.drops = Array.from({ length: n }, () => ({ x: (Math.random() - 0.5) * 26, y: Math.random() * 14, z: (Math.random() - 0.5) * 22, v: 14 + Math.random() * 6 }));
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    this.rain = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: '#a9bcff', transparent: true, opacity: 0.38, depthWrite: false }));
-    this.rain.frustumCulled = false;
-    this.scene.add(this.rain);
-
-    // Ripples: a pool of rings that grow and fade on the wet ground.
-    this.ripples = Array.from({ length: LOW ? 30 : 60 }, () => {
-      const m = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 24), new THREE.MeshBasicMaterial({ color: '#cfdcff', transparent: true, opacity: 0, depthWrite: false }));
-      m.rotation.x = -Math.PI / 2;
-      this.scene.add(m);
-      return { m, life: Math.random() };
-    });
-  }
-
   // ── Hooks ───────────────────────────────────────────────────────────────
   constrain(next) {
     const inDoor = Math.abs(next.x - DOOR.x) < DOOR.half;
@@ -299,30 +279,7 @@ export class StreetWorld extends World3D {
       this.onEnter?.();
     }
 
-    // Rain follows the camera
-    const arr = this.rain.geometry.attributes.position.array;
-    const c = this.camera.position, B = this.rainBox;
-    for (let i = 0; i < this.drops.length; i++) {
-      const d = this.drops[i];
-      d.y -= d.v * dt;
-      d.x += 1.2 * dt;
-      if (d.y < 0) { d.y = B.h; d.x = (Math.random() - 0.5) * B.w; d.z = (Math.random() - 0.5) * B.d; }
-      const x = c.x + d.x, z = hero.position.z + d.z;
-      arr.set([x, d.y, z, x - 0.04, d.y + 0.35, z], i * 6);
-    }
-    this.rain.geometry.attributes.position.needsUpdate = true;
-    for (const r of this.ripples) {
-      r.life += dt * 1.6;
-      if (r.life >= 1) {
-        r.life = 0;
-        const z = hero.position.z + (Math.random() - 0.5) * 10;
-        const onWalk = z < -1.5 || z > 6.6;
-        r.m.position.set(hero.position.x + (Math.random() - 0.5) * 16, onWalk ? 0.13 : 0.02, z);
-      }
-      const sc = 0.04 + r.life * 0.32;
-      r.m.scale.set(sc, sc, sc);
-      r.m.material.opacity = (1 - r.life) * 0.55;
-    }
+    this.updateRain(dt, hero);
     this.walkMan.material.color.set(Math.floor(t / 6) % 2 ? '#36e08a' : '#ff4d5a');
   }
 }

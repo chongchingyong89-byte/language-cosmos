@@ -371,3 +371,182 @@ export function ceilingLightTex() {
     g.strokeRect(2, 2, w - 4, h - 4);
   });
 }
+
+// ── Malaysian shophouse textures ──────────────────────────────────────────
+// Upper-storey facade: pastel wall, two louvred timber windows, a cornice.
+export function shophouseTex(wall, shutter, seed = 1) {
+  return tex(256, 256, (g, w, h) => {
+    g.fillStyle = wall;
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(0,0,0,0.12)';
+    g.fillRect(0, 0, w, 22);
+    g.fillRect(0, h - 10, w, 10);
+    for (const x of [34, 146]) {
+      g.fillStyle = 'rgba(255,255,255,0.35)';
+      g.fillRect(x - 6, 52, 88, 6);
+      g.fillStyle = shutter;
+      g.fillRect(x, 62, 76, 130);
+      g.strokeStyle = 'rgba(0,0,0,0.25)';
+      g.lineWidth = 3;
+      for (let y = 70; y < 190; y += 10) { g.beginPath(); g.moveTo(x + 4, y); g.lineTo(x + 72, y); g.stroke(); }
+      g.beginPath(); g.moveTo(x + 38, 62); g.lineTo(x + 38, 192); g.stroke();
+      if ((seed + x) % 3 === 0) { g.fillStyle = 'rgba(255, 214, 140, 0.85)'; g.fillRect(x + 40, 64, 34, 126); }
+    }
+  });
+}
+
+// Five-foot-way arch: cream wall with a transparent arched opening.
+export function archTex() {
+  return tex(256, 128, (g, w, h) => {
+    g.fillStyle = '#ece0c6';
+    g.fillRect(0, 0, w, h);
+    g.globalCompositeOperation = 'destination-out';
+    g.beginPath();
+    g.moveTo(14, h);
+    g.lineTo(14, 70);
+    g.quadraticCurveTo(w / 2, -18, w - 14, 70);
+    g.lineTo(w - 14, h);
+    g.closePath();
+    g.fill();
+    g.globalCompositeOperation = 'source-over';
+  });
+}
+
+export function grilleTex() {
+  return tex(128, 32, (g, w, h) => {
+    g.fillStyle = '#0d1018';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#4a5466';
+    for (let x = 2; x < w; x += 8) g.fillRect(x, 0, 4, h);
+  }, { repeat: [60, 1] });
+}
+
+export function menuBoardTex(lines) {
+  return tex(256, 320, (g, w, h) => {
+    g.fillStyle = '#fbfbf7';
+    g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#8a8f99';
+    g.lineWidth = 8;
+    g.strokeRect(4, 4, w - 8, h - 8);
+    g.fillStyle = '#c8102e';
+    g.font = `bold 34px ${JP_FONT}`;
+    g.textAlign = 'center';
+    g.fillText('MENU', w / 2, 46);
+    g.textAlign = 'left';
+    lines.forEach(([name, price], i) => {
+      g.fillStyle = '#1d3a8a';
+      g.font = `600 22px ${JP_FONT}`;
+      g.fillText(name, 18, 96 + i * 42);
+      g.textAlign = 'right';
+      g.fillStyle = '#111';
+      g.fillText(price, w - 18, 96 + i * 42);
+      g.textAlign = 'left';
+    });
+  });
+}
+
+// A football match on the mamak TV.
+export function footballTex() {
+  return tex(256, 144, (g, w, h) => {
+    g.fillStyle = '#2e9d4a';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#34ad53';
+    for (let x = 0; x < w; x += 32) g.fillRect(x, 0, 16, h);
+    g.strokeStyle = '#e8f5e9';
+    g.lineWidth = 2;
+    g.strokeRect(8, 8, w - 16, h - 16);
+    g.beginPath(); g.moveTo(w / 2, 8); g.lineTo(w / 2, h - 8); g.stroke();
+    g.beginPath(); g.arc(w / 2, h / 2, 20, 0, Math.PI * 2); g.stroke();
+    for (const [x, y, c] of [[70, 50, '#e63946'], [100, 90, '#e63946'], [160, 60, '#ffd166'], [185, 100, '#ffd166'], [130, 72, '#ffffff']]) {
+      g.fillStyle = c; g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill();
+    }
+    g.fillStyle = 'rgba(0,0,0,0.6)';
+    g.fillRect(8, 8, 74, 18);
+    g.fillStyle = '#fff';
+    g.font = 'bold 12px sans-serif';
+    g.fillText('MYS 1 - 0', 14, 21);
+  });
+}
+
+// Five-foot-way floor: Peranakan-style patterned tiles.
+export function peranakanTileTex() {
+  return tex(128, 128, (g, w, h) => {
+    const s = w / 2;
+    for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+      const x = i * s, y = j * s;
+      g.fillStyle = '#efe6d2';
+      g.fillRect(x, y, s, s);
+      g.fillStyle = '#2f6f7a';
+      g.beginPath(); g.moveTo(x + s / 2, y + 4); g.lineTo(x + s - 4, y + s / 2); g.lineTo(x + s / 2, y + s - 4); g.lineTo(x + 4, y + s / 2); g.closePath(); g.fill();
+      g.fillStyle = '#c8553d';
+      g.beginPath(); g.arc(x + s / 2, y + s / 2, 9, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#e9b44c';
+      for (const [cx, cy] of [[x, y], [x + s, y], [x, y + s], [x + s, y + s]]) { g.beginPath(); g.arc(cx, cy, 8, 0, Math.PI * 2); g.fill(); }
+      g.strokeStyle = 'rgba(0,0,0,0.18)';
+      g.lineWidth = 2;
+      g.strokeRect(x, y, s, s);
+    }
+  }, { repeat: [160, 5] });
+}
+
+export function shutterTex() {
+  return tex(128, 128, (g, w, h) => {
+    g.fillStyle = '#8d939c';
+    g.fillRect(0, 0, w, h);
+    for (let y = 0; y < h; y += 8) {
+      g.fillStyle = 'rgba(255,255,255,0.22)';
+      g.fillRect(0, y, w, 2);
+      g.fillStyle = 'rgba(0,0,0,0.25)';
+      g.fillRect(0, y + 6, w, 2);
+    }
+  });
+}
+
+export function barberPoleTex() {
+  return tex(64, 128, (g, w, h) => {
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, w, h);
+    g.lineWidth = 12;
+    for (let i = -4; i < 8; i++) {
+      g.strokeStyle = i % 2 ? '#d62828' : '#1d4ed8';
+      g.beginPath(); g.moveTo(0, i * 24); g.lineTo(w, i * 24 + 40); g.stroke();
+    }
+  }, { repeat: [1, 1] });
+}
+
+// Night skyline: the twin towers glowing over the rooftops.
+export function skylineTex() {
+  return tex(512, 512, (g, w, h) => {
+    g.clearRect(0, 0, w, h);
+    const tower = (cx) => {
+      const grd = g.createLinearGradient(cx - 30, 0, cx + 30, 0);
+      grd.addColorStop(0, '#5d6a8f');
+      grd.addColorStop(0.5, '#c9d4f0');
+      grd.addColorStop(1, '#4b5578');
+      g.fillStyle = grd;
+      g.beginPath();
+      g.moveTo(cx - 34, h);
+      g.lineTo(cx - 34, 210);
+      g.lineTo(cx - 26, 170);
+      g.lineTo(cx - 18, 130);
+      g.lineTo(cx - 8, 100);
+      g.lineTo(cx + 8, 100);
+      g.lineTo(cx + 18, 130);
+      g.lineTo(cx + 26, 170);
+      g.lineTo(cx + 34, 210);
+      g.lineTo(cx + 34, h);
+      g.closePath();
+      g.fill();
+      g.fillStyle = '#e8eeff';
+      g.fillRect(cx - 2, 20, 4, 82);
+      g.fillStyle = 'rgba(255,240,200,0.55)';
+      for (let y = 220; y < h; y += 9) g.fillRect(cx - 30, y, 60, 2);
+    };
+    tower(200);
+    tower(312);
+    g.fillStyle = '#9fb0dd';
+    g.fillRect(234, 300, 44, 8);   // the skybridge
+    g.fillStyle = 'rgba(40,46,80,0.9)';
+    for (const [x, bw, bh] of [[20, 70, 120], [96, 50, 180], [380, 60, 150], [446, 56, 100]]) g.fillRect(x, h - bh, bw, bh);
+  });
+}

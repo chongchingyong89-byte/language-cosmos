@@ -2,7 +2,7 @@
 // Room: x −6…6, z −5…5 (front wall with the door at z = 5).
 import * as THREE from 'three';
 import { Reflector } from 'three/addons/objects/Reflector.js';
-import { World3D, LOW } from './base.js';
+import { World3D, LOW, CROWD } from './base.js';
 import * as T from './textures.js';
 import { chibiSvg } from '../shops/chibi.js';
 import { loadVrmHeroine } from './heroineVrm.js';
@@ -17,15 +17,16 @@ const EDGES = { A: 'BG', B: 'ACH', C: 'BI', G: 'AD', H: 'BE', I: 'CF', D: 'GE', 
 // Which way to face when browsing at a node (towards the nearest shelf).
 const BROWSE = { G: -Math.PI / 2, H: -Math.PI / 2, I: -Math.PI / 2, A: Math.PI, B: Math.PI, C: Math.PI };
 
-// A shopper wandering the aisles, pausing to browse.
-class Shopper {
-  constructor(hero, start) {
+// A shopper wandering the aisles, pausing to browse. graph = { nodes, edges, browse }.
+export class Shopper {
+  constructor(hero, start, graph = { nodes: NODES, edges: EDGES, browse: BROWSE }) {
+    this.g = graph;
     this.hero = hero;
     this.node = start;
     this.target = start;
     this.wait = 1 + Math.random() * 3;
     hero.setUmbrella(false);
-    hero.placeAt(new THREE.Vector3(NODES[start][0], 0, NODES[start][1]), new THREE.Euler(0, Math.random() * 6, 0));
+    hero.placeAt(new THREE.Vector3(graph.nodes[start][0], 0, graph.nodes[start][1]), new THREE.Euler(0, Math.random() * 6, 0));
   }
 
   update(dt, avoid) {
@@ -33,19 +34,19 @@ class Shopper {
     let speed = 0;
     if (this.wait > 0) {
       this.wait -= dt;
-      const face = BROWSE[this.node];
+      const face = this.g.browse[this.node];
       if (face != null) this.#turn(face, dt);
       if (this.wait <= 0) {
-        const opts = EDGES[this.node];
+        const opts = this.g.edges[this.node];
         this.target = opts[Math.floor(Math.random() * opts.length)];
       }
     } else {
-      const [tx, tz] = NODES[this.target];
+      const [tx, tz] = this.g.nodes[this.target];
       const dx = tx - p.x, dz = tz - p.z, d = Math.hypot(dx, dz);
       const blocked = avoid.some((o) => o !== p && Math.hypot(o.x - (p.x + dx / d * 0.7), o.z - (p.z + dz / d * 0.7)) < 0.75);
       if (d < 0.08) {
         this.node = this.target;
-        this.wait = BROWSE[this.node] != null ? 2 + Math.random() * 4 : 0.2;
+        this.wait = this.g.browse[this.node] != null ? 2 + Math.random() * 4 : 0.2;
       } else if (!blocked) {
         speed = 1.05;
         p.x += (dx / d) * speed * dt;
@@ -129,7 +130,7 @@ export class InteriorWorld extends World3D {
     this.zone = null;
     this.#build();
     this.spawnHero(new THREE.Vector3(DOOR.x, 0, 3.0), Math.PI, { umbrella: false }); // left in the stand outside
-    if (!LOW) this.#spawnPeople(); // phones keep the 2D clerk and no extra shoppers
+    if (CROWD) this.#spawnPeople(); // small phones keep the 2D clerk
   }
 
   // ── Scene ────────────────────────────────────────────────────────────────
@@ -333,7 +334,7 @@ export class InteriorWorld extends World3D {
         { hair: '#151515', top: '#5b7dd6', bottoms: '#8a6a4a', start: 'A' },
         { hair: '#c9a46a', top: '#e98a9a', bottoms: '#2b2f3a', start: 'H' },
       ];
-      for (const look of looks) {
+      for (const look of looks.slice(0, CROWD - 1)) {
         const npc = await loadVrmHeroine();
         if (this.disposed) return;
         npc.tint(look);

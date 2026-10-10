@@ -8,9 +8,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Heroine } from './heroine.js';
-import { getHeroine } from './heroineVrm.js';
+import { getHeroine, setOutlineView } from './heroineVrm.js';
 
 export const LOW = matchMedia('(pointer: coarse)').matches || Math.min(screen.width, screen.height) < 600;
+// How many extra 3D people (clerk, shoppers) a scene may add. Phones share the
+// heroine's textures, so most can afford two; small-memory devices get none.
+export const CROWD = !LOW ? 3 : (navigator.deviceMemory ?? 4) >= 4 ? 2 : 0;
 
 export class World3D {
   constructor(container, {
@@ -33,8 +36,12 @@ export class World3D {
     this.disposables = [];
 
     const w = container.clientWidth, h = container.clientHeight;
-    this.renderer = new THREE.WebGLRenderer({ antialias: !LOW, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, LOW ? 1.25 : 1.75));
+    // Resolution: start sharp, then let the frame-time governor (#govern) trade
+    // pixels for smoothness on slower phones.
+    this.prMax = Math.min(window.devicePixelRatio, 2);
+    this.pr = Math.min(window.devicePixelRatio, LOW ? 1.5 : 1.75);
+    this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+    this.renderer.setPixelRatio(this.pr);
     this.renderer.setSize(w, h);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = exposure;
@@ -45,10 +52,13 @@ export class World3D {
     if (fog) this.scene.fog = new THREE.FogExp2(fog[0], fog[1]);
     this.camera = new THREE.PerspectiveCamera(52, w / h, 0.1, 200);
 
-    this.composer = new EffectComposer(this.renderer);
+    // MSAA inside the post-processing chain (canvas antialias does nothing there).
+    const target = new THREE.WebGLRenderTarget(w * this.pr, h * this.pr, { type: THREE.HalfFloatType, samples: LOW ? 2 : 4 });
+    this.composer = new EffectComposer(this.renderer, target);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.composer.addPass(new UnrealBloomPass(new THREE.Vector2(w, h), ...bloom));
     this.composer.addPass(new OutputPass());
+    this.composer.setSize(w, h); // a custom target leaves the size in device pixels: reset it to CSS pixels
 
     this.onResize = () => {
       const W = container.clientWidth, H = container.clientHeight;
@@ -117,6 +127,53 @@ export class World3D {
     return p;
   }
 
+  // ── Weather: rain streaks that follow the camera, ripples on the ground ──
+  // groundAt(z) → height of the surface at that z (pavement vs road).
+  addRain({ count = LOW ? 1100 : 2400, ripples = LOW ? 30 : 60, groundAt = () => 0.02, color = '#a9bcff' } = {}) {
+    this.rainBox = { w: 26, h: 14, d: 22 };
+    this.groundAt = groundAt;
+    this.drops = Array.from({ length: count }, () => ({ x: (Math.random() - 0.5) * 26, y: Math.random() * 14, z: (Math.random() - 0.5) * 22, v: 14 + Math.random() * 6 }));
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 6), 3));
+    this.rain = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.38, depthWrite: false }));
+    this.rain.frustumCulled = false;
+    this.scene.add(this.rain);
+    this.ripples = Array.from({ length: ripples }, () => {
+      const m = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 24), new THREE.MeshBasicMaterial({ color: '#cfdcff', transparent: true, opacity: 0, depthWrite: false }));
+      m.rotation.x = -Math.PI / 2;
+      this.scene.add(m);
+      return { m, life: Math.random() };
+    });
+  }
+
+  // shelter(x, z) → true where a roof keeps the ground dry (no ripples).
+  updateRain(dt, hero, shelter = () => false) {
+    if (!this.rain) return;
+    const arr = this.rain.geometry.attributes.position.array;
+    const c = this.camera.position, B = this.rainBox;
+    for (let i = 0; i < this.drops.length; i++) {
+      const d = this.drops[i];
+      d.y -= d.v * dt;
+      d.x += 1.2 * dt;
+      if (d.y < 0) { d.y = B.h; d.x = (Math.random() - 0.5) * B.w; d.z = (Math.random() - 0.5) * B.d; }
+      const x = c.x + d.x, z = hero.position.z + d.z;
+      arr.set([x, d.y, z, x - 0.04, d.y + 0.35, z], i * 6);
+    }
+    this.rain.geometry.attributes.position.needsUpdate = true;
+    for (const r of this.ripples) {
+      r.life += dt * 1.6;
+      if (r.life >= 1) {
+        r.life = 0;
+        const z = hero.position.z + (Math.random() - 0.5) * 10, x = hero.position.x + (Math.random() - 0.5) * 16;
+        r.m.visible = !shelter(x, z);
+        r.m.position.set(x, this.groundAt(z), z);
+      }
+      const sc = 0.04 + r.life * 0.32;
+      r.m.scale.set(sc, sc, sc);
+      r.m.material.opacity = (1 - r.life) * 0.55;
+    }
+  }
+
   // ── Input ────────────────────────────────────────────────────────────────
   #bindInput() {
     this.onKey = (e) => {
@@ -150,8 +207,27 @@ export class World3D {
   // ── Loop ─────────────────────────────────────────────────────────────────
   start() { this.renderer.setAnimationLoop(() => this.#frame()); }
 
+  // Every ~1.5 s: too slow → fewer pixels; smooth for a while → more.
+  #govern(raw) {
+    const g = this.gov ??= { sum: 0, n: 0, calm: 0 };
+    g.sum += raw;
+    if (++g.n < 90) return;
+    const avg = g.sum / g.n;
+    g.sum = g.n = 0;
+    let next = this.pr;
+    if (avg > 1 / 38 && this.pr > 1) { next = Math.max(1, this.pr - 0.25); g.calm = -4; }
+    else if (avg < 1 / 55 && ++g.calm > 3 && this.pr < this.prMax) { next = Math.min(this.prMax, this.pr + 0.25); g.calm = 0; }
+    if (next !== this.pr) {
+      this.pr = next;
+      this.renderer.setPixelRatio(next);
+      this.composer.setPixelRatio(next);
+    }
+  }
+
   #frame() {
-    const dt = Math.min(this.clock.getDelta(), 0.05);
+    const raw = this.clock.getDelta();
+    const dt = Math.min(raw, 0.05);
+    if (raw < 0.5) this.#govern(raw);
     const t = this.clock.elapsedTime;
     const hero = this.hero.root;
 
@@ -191,6 +267,7 @@ export class World3D {
     this.camera.position.lerp(want, Math.min(dt * 5, 1));
     this.camera.lookAt(target);
 
+    setOutlineView(this.camera, this.renderer.domElement.height);
     this.update(dt, t, hero);
     this.#readables();
     this.composer.render();

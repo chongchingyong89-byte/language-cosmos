@@ -817,6 +817,7 @@ body:not(.lens-on) .core-label .lens { display: none; }
 .zone-prompt { position: absolute; z-index: 3; left: 50%; bottom: calc(var(--safe-b) + 56px); transform: translateX(-50%);
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; max-width: calc(100vw - 24px);
   padding: 10px 12px; border-radius: 18px; background: rgba(255, 253, 245, 0.96); color: #2a2733; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+.zone-prompt[hidden], .read-card[hidden], .world-toast[hidden] { display: none; }
 .zone-prompt .zp-label { display: flex; align-items: center; gap: 6px; width: 100%; justify-content: center; }
 .zone-prompt .zp-label i { font-style: normal; font-size: 26px; }
 .zone-prompt .zp-label b { font-size: 19px; font-family: 'Hiragino Sans','Yu Gothic','Noto Sans JP',var(--font); }
@@ -857,6 +858,12 @@ body:not(.lens-on) .core-label .lens { display: none; }
 .coin.c100, .coin.c50 { background: radial-gradient(circle at 35% 30%, #ffffff, #b9bec6 70%); }
 .coin.c10 { background: radial-gradient(circle at 35% 30%, #f4c49a, #b8733f 70%); }
 .coin.note { width: 100px; border-radius: 10px; background: linear-gradient(135deg, #d6e8f5, #9cc0dc); color: #1d3a55; }
+.coin.note.rm10 { width: 84px; background: linear-gradient(135deg, #ffb3a7, #d9433a); color: #4a0f0a; }
+.coin.note.rm5 { width: 84px; background: linear-gradient(135deg, #c6efb5, #4fa64a); color: #12380f; }
+.coin.note.rm1 { width: 84px; background: linear-gradient(135deg, #cfe2ff, #4a7fd1); color: #0f2a55; }
+.coin.sen50, .coin.sen20 { background: radial-gradient(circle at 35% 30%, #fff1b8, #c9a440 70%); }
+.coin.sen20 { width: 54px; height: 54px; }
+.coin.sen10 { width: 48px; height: 48px; background: radial-gradient(circle at 35% 30%, #ffffff, #b9bec6 70%); }
 .co-paid { text-align: center; margin-top: 8px; font-size: 14px; }
 
 /* Shopping result */

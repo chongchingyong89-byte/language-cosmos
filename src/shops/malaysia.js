@@ -3,6 +3,8 @@
 // prices in ringgit, Manglish "lah" and "tapau", "tak apa", "makan sini atau
 // bungkus?", reduplication (renyai-renyai), budi bahasa (courtesy).
 import { catSvg } from './chibi.js';
+import { KLStreetWorld, KL_READABLES } from '../world/klStreet.js';
+import { MamakInterior, MAMAK_WORDS } from '../world/mamak.js';
 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const shuffle = (a) => a.map((v) => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(([, v]) => v);
@@ -381,6 +383,64 @@ export function scene() {
 </svg>`;
 }
 
+// ── Mum's list and the till (3D mamak) ────────────────────────────────────
+const SHOPPABLE = Object.keys(ITEMS);
+export function shoppingList() {
+  return shuffle(SHOPPABLE).slice(0, 3).map((item) => {
+    const it = ITEMS[item];
+    const q = Math.min(1 + Math.floor(Math.random() * 3), it.max ?? 3);
+    return { item, q, text: `${counted(it.counter, q).ms} ${it.ms}`, reading: '' };
+  });
+}
+
+// Malay reads as it is written, so the "reading" line only carries prices.
+const L2 = (text, reading, en) => ({ text, reading, en });
+const FOOD = ['nasilemak', 'roticanai', 'tehtarik', 'sirap', 'kuih', 'kerepek'];
+export const TILL = {
+  clerk: { name: 'Anneh · the cashier', look: { hair: '#1a1a1a', style: 'short', outfit: '#f4f4f4', legs: '#2b2f3a', acc: ['cap'] } },
+  greet: L2('Okey, adik. Kira dulu, ya.', '', 'OK, little one. Let me add it up first.'),
+  handOver: 'Put the basket on the counter ▶',
+  questions: [
+    () => ({
+      line: L2('Ada lagi?', '', 'Anything else?'),
+      choices: [L2('Itu saja.', '', "That's all."), L2('Tak ada, itu saja, terima kasih.', '', "Nothing else, that's all, thank you.")],
+      after: () => ({ line: L2('Okey!', '', 'OK!'), tip: `💡 <b>Itu saja</b> = "that's all". Saja means "only, just": short and friendly.` }),
+    }),
+    (ids) => (ids.some((id) => FOOD.includes(id)) ? {
+      line: L2('Makan sini atau bungkus?', '', 'Eat here or take away?'),
+      choices: [L2('Bungkus.', '', 'Take away (wrap it up).'), L2('Tapau, lah!', '', 'Takeaway, lah! (Manglish)'), L2('Makan sini.', '', 'Eat here.')],
+      after: (a) => (a.text.startsWith('Tapau')
+        ? { line: L2('Okey, tapau!', '', 'OK, takeaway!'), tip: '💡 <b>Tapau</b> comes from Cantonese 打包, and <b>lah</b> makes it friendly. Every Malaysian understands it, whatever language they speak at home.' }
+        : a.text.startsWith('Bungkus')
+          ? { line: L2('Okey, bungkus.', '', 'OK, wrapped to go.'), tip: '💡 <b>Bungkus</b> = "wrap up". It is also the counter word for packets: sebungkus nasi lemak.' }
+          : { line: L2('Duduk mana-mana.', '', 'Sit anywhere.'), tip: '💡 <b>mana-mana</b>: doubling "mana" (where) makes "anywhere".' }),
+    } : null),
+    () => ({
+      line: L2('Nak plastik?', '', 'Want a plastic bag?'),
+      choices: [L2('Tak apa, terima kasih.', '', "It's OK, thank you (= no thanks)."), L2('Ya, nak satu.', '', 'Yes, one please.')],
+      after: (a) => (a.text.startsWith('Tak apa')
+        ? { line: L2('Okey, terima kasih!', '', 'OK, thank you!'), tip: '💡 <b>Tak apa</b> ("no problem") is a soft way to say no, like Japanese <b>大丈夫です</b>. Malay courtesy (budi bahasa) avoids a hard "tidak!"' }
+        : null),
+    }),
+  ],
+  price: (n) => { const p = ringgit(n); return L2(`Semua sekali, ${p.say}.`, p.short, 'Altogether: how much is that? Pay with the notes and coins!'); },
+  short: (n) => ringgit(n).short,
+  coins: [
+    { v: 1000, label: 'RM10', unit: 'ringgit', cls: 'note rm10' }, { v: 500, label: 'RM5', unit: 'ringgit', cls: 'note rm5' },
+    { v: 100, label: 'RM1', unit: 'ringgit', cls: 'note rm1' }, { v: 50, label: '50', unit: 'sen', cls: 'sen50' },
+    { v: 20, label: '20', unit: 'sen', cls: 'sen20' }, { v: 10, label: '10', unit: 'sen', cls: 'sen10' },
+  ],
+  more: (d) => { const m = ringgit(d); return L2(`Tak cukup lagi, adik. Kurang ${m.say}.`, m.short, `Not enough yet: ${m.short} short. (kurang = "less, missing")`); },
+  change: (d) => { const c = ringgit(d); return { line: L2(`Ini bakinya, ${c.say}.`, c.short, `Here's your change: ${c.short}.`), tip: '💡 <b>Baki</b> = "change, what is left over". <b>-nya</b> works like "the" or "your": bakinya = your change.' }; },
+  exact: { line: L2('Cukup-cukup! Terima kasih.', '', 'Exactly enough! Thank you.'), tip: '🎯 <b>Cukup-cukup</b>: "just enough!" Doubling <b>cukup</b> (enough) makes it "exactly enough".' },
+  thanks: L2('Terima kasih, datang lagi, ya!', '', 'Thank you, come again!'),
+};
+
+export function listLine(item, q) {
+  const it = ITEMS[item], c = counted(it.counter, q);
+  return { text: `${c.ms} ${it.ms}`, reading: '', rule: `${COUNTERS[it.counter].word} counts ${COUNTERS[it.counter].rule.split(':')[0].replace(/ \(.*/, '').replace('!', '')}` };
+}
+
 export const MALAYSIA = {
   id: 'my', flag: '🇲🇾', country: 'Malaysia', name: 'Kedai Runcit & Mamak', native: 'Kedai Runcit Budi', lang: 'ms',
   tagline: 'Evening shift at a shophouse mamak',
@@ -391,6 +451,14 @@ export const MALAYSIA = {
   scene, night, catSvg,
   snacks: Object.values(ITEMS).filter((i) => i.fav).map((i) => ({ emoji: i.emoji, native: i.ms, en: i.en })),
   currency: (n) => `RM${n.toFixed(2)}`,
+  shoppingList, counted, counters: COUNTERS, till: TILL, listLine,
+  world: {
+    Street: KLStreetWorld, Interior: MamakInterior, streetWords: KL_READABLES, shopWords: MAMAK_WORDS,
+    title: 'Jalan Budi', sub: 'A rainy evening in Kuala Lumpur', rain: 0.75, insideRain: 0.4,
+    blurb: (n) => `Stroll the shophouses under the <b>kaki lima</b> and find <b>${n} Malay words</b> on signs, shops and the street. Then step into the mamak to do Mum's shopping.`,
+    listTitle: 'Senarai Mak', till: { text: 'Kaunter', reading: 'pay here' }, shift: '🧋 Work the evening shift',
+    weather: '☔ <b>hujan lebat</b> <small>heavy rain</small>',
+  },
   intro: {
     title: 'Kedai Runcit Budi · Evening Shift',
     text: 'Rain is falling on a Malaysian shophouse. Uncles, aunties and kids drop in for teh tarik, roti canai and nasi lemak. Serve them in Malay (and a little Manglish)!',
