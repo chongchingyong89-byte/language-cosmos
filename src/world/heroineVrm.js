@@ -8,13 +8,26 @@ import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 export const HEROINE_URL = 'assets/heroine.vrm';
 export const HEROINE_CREDIT = 'Heroine: "VRM1_Constraint_Twist_Sample" © 2022 pixiv Inc., VRM Public License 1.0';
 
+// One heroine for the whole session, carried between the street and the shop.
+let shared = null;
+export function getHeroine(onProgress) {
+  shared ??= loadVrmHeroine(onProgress);
+  return shared;
+}
+
 export async function loadVrmHeroine(onProgress) {
   const loader = new GLTFLoader();
   loader.register((parser) => new VRMLoaderPlugin(parser));
   const gltf = await loader.loadAsync(HEROINE_URL, (e) => e.total && onProgress?.(e.loaded / e.total));
   const vrm = gltf.userData.vrm;
   VRMUtils.rotateVRM0(vrm);
-  vrm.scene.traverse((o) => { o.frustumCulled = false; });
+  vrm.scene.traverse((o) => {
+    o.frustumCulled = false;
+    // Ink outlines show through the hair strands as dark streaks: drop them on hair only.
+    for (const m of [o.material].flat()) {
+      if (m && /hair/i.test(m.name ?? '') && 'outlineWidthFactor' in m) m.outlineWidthFactor = 0;
+    }
+  });
   const heroine = new VrmHeroine(vrm);
   heroine.settle();
   return heroine;
@@ -75,6 +88,12 @@ export class VrmHeroine {
 
   smile(seconds = 1.6) { this.smileT = seconds; }
 
+  // Umbrella open (outside, in the rain) or put away (inside the shop).
+  setUmbrella(open) {
+    this.umbrellaOpen = open;
+    this.umbrella.visible = open;
+  }
+
   // Run the pose + spring-bone physics for a second so sleeves and hair
   // fall naturally from the T-pose before she's shown.
   settle() {
@@ -114,9 +133,16 @@ export class VrmHeroine {
     // Left arm relaxed at her side, swinging; right arm holds the umbrella in front.
     B('leftUpperArm').rotation.set(sw * 0.35 * amp, 0, -1.2);
     B('leftLowerArm').rotation.set(0, 0.25 + Math.max(0, -sw) * 0.25 * amp, 0);
-    B('rightUpperArm').rotation.set(0, 0.55, 1.12);
-    B('rightLowerArm').rotation.set(0, 1.75, 0);
-    B('rightHand').rotation.set(0, 0, -0.3);
+    if (this.umbrellaOpen !== false) {
+      B('rightUpperArm').rotation.set(0, 0.55, 1.12);
+      B('rightLowerArm').rotation.set(0, 1.75, 0);
+      B('rightHand').rotation.set(0, 0, -0.3);
+    } else {
+      // No umbrella: both arms relaxed and swinging
+      B('rightUpperArm').rotation.set(-sw * 0.35 * amp, 0, 1.2);
+      B('rightLowerArm').rotation.set(0, -0.25 - Math.max(0, sw) * 0.25 * amp, 0);
+      B('rightHand').rotation.set(0, 0, 0);
+    }
 
     // Face: blink every few seconds; smile when she finds a word.
     const em = this.vrm.expressionManager;

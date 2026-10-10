@@ -142,6 +142,8 @@ export class Heroine {
     this.root.add(shadow);
   }
 
+  setUmbrella(open) { this.umbrella.visible = open; }
+
   // speed: 0 idle, ~2 walk, ~4 run. Returns true on each footfall.
   update(dt, speed) {
     this.speed += (speed - this.speed) * Math.min(dt * 8, 1);

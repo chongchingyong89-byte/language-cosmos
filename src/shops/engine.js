@@ -5,6 +5,8 @@ import { SHOPS } from './registry.js';
 import { chibi, chibiSvg } from './chibi.js';
 import { Rain } from './rain.js';
 import { StreetWorld, READABLES } from '../world/street.js';
+import { InteriorWorld, SHOP_WORDS } from '../world/interior.js';
+import { Checkout } from './checkout.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,7 +17,8 @@ const store = {
 };
 
 export class ShopGame {
-  constructor(sound, { onFinish, onOpen, onClose, onWords }) {
+  constructor(sound, { onFinish, onOpen, onClose, onWords, onShopped }) {
+    this.onShopped = onShopped;
     this.sound = sound;
     this.onFinish = onFinish;
     this.onOpen = onOpen;
@@ -84,6 +87,11 @@ export class ShopGame {
   introById(id) {
     const shop = SHOPS.find((s) => s.id === id && s.ready);
     if (shop) this.intro(shop); else this.openPicker();
+  }
+
+  insideById(id) {
+    const shop = SHOPS.find((s) => s.id === id && s.ready);
+    if (shop?.world) this.openInterior(shop); else this.openPicker();
   }
 
   play(id) {
@@ -268,7 +276,7 @@ export class ShopGame {
   }
 
   // ── The walkable 3D street ───────────────────────────────────────────────
-  openWorld(shop) {
+  openWorld(shop, { spawn = 'start' } = {}) {
     this.sound.click();
     this.#closeWorld();
     this.shop = shop;
@@ -285,12 +293,12 @@ export class ShopGame {
         <div class="read-card" hidden></div>
         <div class="world-toast" hidden></div>
         <div class="joy" aria-label="Move"><i></i></div>
-        <div class="world-hint"><span class="only-mouse">WASD / arrows to walk · Shift to run · drag to look</span><span class="only-touch">Joystick to walk · drag to look</span> · <button class="link-btn" data-skip>Skip to the counter ▶</button></div>
-        <div class="world-title">
+        <div class="world-hint"><span class="only-mouse">WASD / arrows to walk · Shift to run · drag to look</span><span class="only-touch">Joystick to walk · drag to look</span> · <button class="link-btn" data-skip>Skip into the shop ▶</button></div>
+        <div class="world-title ${spawn === 'start' ? '' : 'gone'}">
           <div class="wt-inner">
             <div class="wt-jp">あまやどり</div>
             <div class="wt-sub">A rainy night in Tokyo</div>
-            <p>Walk the wet street and find <b>${total} Japanese words</b> on signs, shops and the road. Then step through the glowing door to start your shift at the konbini.</p>
+            <p>Walk the wet street and find <b>${total} Japanese words</b> on signs, shops and the road. Then step through the glowing door to do Mum's shopping at the konbini.</p>
             <button class="kid-btn" data-go>Start walking ▶</button>
             <div class="wt-loading"></div>
             <div class="wt-credit">Heroine: VRM sample model © 2022 pixiv Inc. (VRM Public License 1.0)</div>
@@ -301,8 +309,9 @@ export class ShopGame {
     this.world = new StreetWorld($('.world-canvas', wrap), {
       sound: this.sound,
       found: this.found,
-      onDiscover: (r, n) => this.#discover(r, n, total),
+      onDiscover: (r, n) => this.#discover(r, n, total, 'words'),
       onEnter: () => this.#enterShop(),
+      spawn,
     });
     this.world.onAvatarProgress = (p) => {
       const el = $('.wt-loading', wrap);
@@ -331,13 +340,175 @@ export class ShopGame {
     this.root.querySelector('.world')?.classList.add('fade-out');
     setTimeout(() => {
       this.entering = false;
-      this.#closeWorld();
-      this.startNight();
+      this.openInterior(this.shop);
     }, 700);
   }
 
-  #discover(r, n, total) {
-    store.set(`words-${this.shop.id}`, [...this.found]);
+  // ── Inside the konbini (3D): shop from Mum's list, pay at the till ──────
+  openInterior(shop) {
+    this.#closeWorld();
+    this.shop = shop;
+    this.shopFound ??= new Set(store.get(`shopwords-${shop.id}`, []));
+    this.list = shop.shoppingList();
+    this.basket = new Map();
+    const total = SHOP_WORDS.length;
+    this.#show(`
+      <div class="world interior">
+        <div class="world-canvas"></div>
+        <div class="world-hud">
+          <span class="hud-pill">📖 <b class="w-found">${this.shopFound.size}</b>/${total} shop words</span>
+          <span class="hud-pill">🧺 <b class="w-basket">0</b> · ¥<b class="w-total">0</b></span>
+        </div>
+        <button class="shop-x" data-close aria-label="Close">✕</button>
+        <div class="shop-list"></div>
+        <div class="zone-prompt" hidden></div>
+        <div class="read-card" hidden></div>
+        <div class="world-toast" hidden></div>
+        <div class="joy" aria-label="Move"><i></i></div>
+        <div class="world-hint"><span class="only-mouse">Walk to a shelf · <kbd>E</kbd> take · <kbd>Q</kbd> put back</span><span class="only-touch">Walk to a shelf and tap Take</span> · <button class="link-btn" data-night>👔 Work the night shift</button></div>
+      </div>`);
+    const wrap = $('.world', this.root);
+    this.#renderList();
+    this.world = new InteriorWorld($('.world-canvas', wrap), {
+      sound: this.sound,
+      found: this.shopFound,
+      items: shop.items,
+      onDiscover: (r, n) => this.#discover(r, n, total, 'shopwords'),
+      onZone: (z) => this.#zonePrompt(z),
+      onExit: () => this.#leaveShop(),
+    });
+    this.world.onKeyAction = (k) => {
+      if (k === 'e') this.#useZone(1);
+      if (k === 'q') this.#useZone(-1);
+    };
+    this.world.start();
+    window.__world = this.world;
+    this.sound.setRain(0.25); // the rain, muffled through the glass
+    this.sound.chime();
+    $('[data-night]', wrap).addEventListener('click', () => { this.#closeWorld(); this.startNight(); });
+    $('.shop-list', wrap).addEventListener('click', (e) => {
+      if (e.target.closest('[data-en]')) $('.shop-list', wrap).classList.toggle('show-en');
+    });
+    this.#bindJoystick($('.joy', wrap));
+    this.#cardLoop(wrap);
+  }
+
+  #renderList() {
+    const el = $('.shop-list', this.root);
+    if (!el) return;
+    const C = this.shop.counters;
+    el.innerHTML = `<div class="sl-head">📝 お母さんのメモ <small>Mum's list</small><button class="sl-en" data-en title="Show meanings">EN</button></div>
+      ${this.list.map((l) => {
+        const it = this.shop.items[l.item];
+        const got = this.basket.get(l.item) ?? 0;
+        return `<div class="sl-line ${got === l.q ? 'done' : got > l.q ? 'over' : ''}">
+          <span class="sl-check">${got === l.q ? '✓' : got > l.q ? '!' : '○'}</span>
+          <span class="sl-text"><b>${esc(l.text)}</b><small>${esc(l.reading)}</small><i class="sl-mean">${l.q} × ${esc(it.en)} · ${C[it.counter].kanji} = ${esc(C[it.counter].rule.split(':')[0])}</i></span>
+          <span class="sl-got">${got}/${l.q}</span>
+        </div>`;
+      }).join('')}`;
+    const n = [...this.basket.values()].reduce((a, b) => a + b, 0);
+    const yen = [...this.basket].reduce((a, [id, q]) => a + this.shop.items[id].price * q, 0);
+    const b = $('.w-basket', this.root), t = $('.w-total', this.root);
+    if (b) b.textContent = n;
+    if (t) t.textContent = yen;
+  }
+
+  #zonePrompt(z) {
+    const el = $('.zone-prompt', this.root);
+    if (!el) return;
+    this.zone = z;
+    if (!z) { el.hidden = true; return; }
+    el.hidden = false;
+    if (z.type === 'till') {
+      const empty = !this.basket.size;
+      el.innerHTML = `<span class="zp-label">🛎️ <b>レジ</b> <small>reji · the till</small></span>
+        <button class="kid-btn" data-pay ${empty ? 'disabled' : ''}>${empty ? 'Your basket is empty' : 'Pay at the till ▶'}</button>`;
+      $('[data-pay]', el)?.addEventListener('click', () => this.#openCheckout());
+      return;
+    }
+    const it = this.shop.items[z.item];
+    const got = this.basket.get(z.item) ?? 0;
+    el.innerHTML = `<span class="zp-label"><i>${it.emoji}</i> <b>${esc(it.jp)}</b> <small>${esc(it.romaji)} · ${esc(it.en)} · ¥${it.price}</small></span>
+      <button class="kid-btn ghost" data-take="-1" ${got ? '' : 'disabled'}>－ Put back</button>
+      <button class="kid-btn" data-take="1">＋ Take${got ? ` (${got})` : ''}</button>`;
+    for (const b of el.querySelectorAll('[data-take]')) b.addEventListener('click', () => this.#useZone(+b.dataset.take));
+  }
+
+  #useZone(d) {
+    const z = this.zone;
+    if (!z) return;
+    if (z.type === 'till') { if (d > 0 && this.basket.size) this.#openCheckout(); return; }
+    const got = (this.basket.get(z.item) ?? 0) + d;
+    if (got < 0 || got > 5) return;
+    if (got === 0) this.basket.delete(z.item); else this.basket.set(z.item, got);
+    this.sound.toggle(d > 0, d > 0 ? 3 : 1);
+    this.#renderList();
+    this.#zonePrompt(z);
+  }
+
+  #openCheckout() {
+    if (this.checkout || !this.basket.size) return;
+    this.world.frozen = true;
+    $('.zone-prompt', this.root).hidden = true;
+    const shop = this.shop;
+    this.checkout = new Checkout($('.world', this.root), {
+      items: shop.items, yen: shop.yen, counted: shop.counted, list: this.list, basket: this.basket, sound: this.sound,
+      onDone: (r) => { this.checkout = null; this.#shopResult(r); },
+    });
+  }
+
+  #shopResult(r) {
+    const wrap = $('.world', this.root);
+    const C = this.shop.counters;
+    const el = document.createElement('div');
+    el.className = 'shop-result';
+    el.innerHTML = `
+      <div class="big-stars">${'★'.repeat(r.stars)}${'☆'.repeat(3 - r.stars)}</div>
+      <h2>${r.stars === 3 ? 'Perfect shopping trip!' : r.stars === 2 ? 'Mum will be happy!' : 'Oops, check Mum\'s list!'}</h2>
+      <div class="sr-lines">${r.lines.map((l) => `<div class="${l.ok ? 'ok' : 'bad'}">
+        <span>${l.ok ? '✅' : '❌'}</span>
+        <div><b>${esc(l.it.jp)} ${esc(l.c.jp)}</b> <small>${esc(l.c.kana)} · ${esc(l.c.romaji)}</small>
+        <p>${l.ok ? `Right! ${C[l.it.counter].kanji} counts ${esc(C[l.it.counter].rule.split(':')[0])}.` : `It meant <b>${l.q}</b>, and you took ${l.got}. ${C[l.it.counter].kanji} counts ${esc(C[l.it.counter].rule.split(':')[0])}.`}</p></div>
+      </div>`).join('')}
+      ${r.extras.length ? `<div class="bad"><span>🛒</span><div><p>Extra things not on the list: ${r.extras.map((id) => this.shop.items[id].emoji).join(' ')}</p></div></div>` : ''}</div>
+      ${r.exact ? '<p class="co-tip">🎯 ぴったり! You paid the exact amount.</p>' : ''}
+      <h3>Phrases from the till</h3>
+      <div class="learned">${r.learned.slice(0, 10).map((l) => `<div><b class="jp">${esc(l.jp)}</b><span>${esc(l.romaji ?? '')}</span><small>${esc(l.en ?? '')}</small></div>`).join('')}</div>
+      <div class="row">
+        <button class="kid-btn" data-out>🚪 Walk back outside</button>
+        <button class="kid-btn ghost" data-again>🧺 Shop again</button>
+        <button class="kid-btn ghost" data-night>👔 Work the night shift</button>
+      </div>`;
+    wrap.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    if (r.stars === 3) this.sound.cheer();
+    this.onShopped?.(this.shop.id, r);
+    const done = () => { el.remove(); this.world.frozen = false; };
+    $('[data-out]', el).addEventListener('click', () => { el.remove(); this.#leaveShop(); });
+    $('[data-again]', el).addEventListener('click', () => {
+      done();
+      this.list = this.shop.shoppingList();
+      this.basket = new Map();
+      this.#renderList();
+      this.sound.chime();
+    });
+    $('[data-night]', el).addEventListener('click', () => { this.#closeWorld(); this.startNight(); });
+  }
+
+  #leaveShop() {
+    if (this.leaving) return;
+    this.leaving = true;
+    this.sound.chime();
+    this.root.querySelector('.world')?.classList.add('fade-out');
+    setTimeout(() => {
+      this.leaving = false;
+      this.openWorld(this.shop, { spawn: 'door' });
+    }, 600);
+  }
+
+  #discover(r, n, total, key) {
+    store.set(`${key}-${this.shop.id}`, [...(key === 'words' ? this.found : this.shopFound)]);
     const el = $('.w-found', this.root);
     if (el) el.textContent = n;
     const toast = $('.world-toast', this.root);

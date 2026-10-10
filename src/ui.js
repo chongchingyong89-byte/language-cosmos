@@ -127,11 +127,13 @@ export class UI {
     const fromHash = (instant) => {
       const id = decodeURIComponent(location.hash.slice(1));
       // Shop links: #shop (picker), #shop-jp (intro), #shop-jp/play (start a night)
-      const shopLink = id.match(/^shop(?:-(\w+))?(\/play)?$/);
+      // #shop · #shop-jp (street) · #shop-jp/inside (3D shop) · #shop-jp/play (night shift)
+      const shopLink = id.match(/^shop(?:-(\w+))?(?:\/(play|inside))?$/);
       if (shopLink) {
         const shops = this.explorer.shops;
         if (!shopLink[1]) shops.openPicker();
-        else if (shopLink[2]) shops.play(shopLink[1]);
+        else if (shopLink[2] === 'play') shops.play(shopLink[1]);
+        else if (shopLink[2] === 'inside') shops.insideById(shopLink[1]);
         else shops.introById(shopLink[1]);
         return;
       }

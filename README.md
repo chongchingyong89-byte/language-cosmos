@@ -26,11 +26,13 @@ First-time visitors choose a mode on the welcome screen; the ⇄ pill switches a
 Learn a language, its everyday attitudes and its favourite snacks at a shop counter. Phase 1 is open: **🇯🇵 あまやどり**, a rainy night in Tokyo.
 
 - **The street (3D):** walk an anime heroine with a clear umbrella through a wet, reflective street (WASD/arrows, or a joystick on phones). Find 13 Japanese words on signs, shops and the road (止まれ, 横断歩道, 自動販売機, 点字ブロック…), each with a reading, meaning and culture note.
-- **The counter:** step through the konbini door to serve customers with different attitudes (hurried, indirect, very polite…). Learn counter words (本・個・枚・冊・匹), polite shop phrases, prices in Japanese, katakana and the indirect "大丈夫です" (no thanks).
+- **Inside the konbini (3D):** do Mum's shopping. Her list is written with counter words (おにぎり 二個, お茶 一本, せんべい 三枚), so you must read 本・個・枚・冊 to take the right number from the shelves. 11 more words hang over the aisles (飲み物, お菓子, パン, 雑誌, レジ…).
+- **The till:** the clerk asks 温めますか？, 袋はご利用ですか？ and ポイントカードは？. Answer in Japanese (say 大丈夫です for "no thanks"), hear the price (八百六十円です), pay with yen coins and notes, and get お返し (change), or ぴったり for the exact amount. Your basket is then checked against the list.
+- **The night shift:** switch roles and serve customers with different attitudes (hurried, indirect, very polite…): counter words, polite shop phrases, prices, katakana.
 - Generated koto lo-fi music in the Japanese *in* scale, rain, door chime and footsteps.
 - Coming phases: Malaysia, China, Korea, Thailand, India, France, Mexico.
 
-Direct links: `#shop` (all shops), `#shop-jp` (the street), `#shop-jp/play` (straight to the counter).
+Direct links: `#shop` (all shops), `#shop-jp` (the street), `#shop-jp/inside` (the 3D shop), `#shop-jp/play` (the night shift).
 
 ## Credits
 
@@ -65,8 +67,8 @@ src/
   audio.js              procedural soundscape: ambient pad, wind, twinkles, interaction cues
   profile.js            builds each language's hypothesised personality tilt from its leaves
   kids/                 Explorer mode: data.js (greetings, powers, tour, quiz, badges), explorer.js, games.js, voices.js
-  shops/                World Shops: engine.js (counter game), japan.js (shop data), registry.js, chibi.js, rain.js
-  world/                3D street: street.js (scene, controls, word hunt), heroineVrm.js (anime avatar), heroine.js (fallback), textures.js
+  shops/                World Shops: engine.js (flow + counter game), checkout.js (paying at the till), japan.js (shop data), registry.js, chibi.js, rain.js
+  world/                3D scenes: base.js (renderer, camera, controls, signs), street.js, interior.js, heroineVrm.js (anime avatar), heroine.js (fallback), textures.js
 assets/heroine.vrm      the anime heroine (pixiv VRM sample)
   data/
     taxonomy.js         8 trait domains, 5 evidence levels, families, galaxy order

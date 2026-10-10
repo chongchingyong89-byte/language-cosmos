@@ -260,3 +260,114 @@ export function asphaltTex() {
     }
   }, { repeat: [6, 2] });
 }
+
+// ── Interior textures ─────────────────────────────────────────────────────
+// A hanging/POP sign: big Japanese text, optional small English line.
+export function signTex(text, { bg = '#ffffff', fg = '#1d6f8c', sub = '', w = 512, h = 160, size = 84, border = null } = {}) {
+  return tex(w, h, (g) => {
+    g.fillStyle = bg;
+    g.fillRect(0, 0, w, h);
+    if (border) { g.strokeStyle = border; g.lineWidth = 10; g.strokeRect(5, 5, w - 10, h - 10); }
+    g.fillStyle = fg;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.font = `bold ${size}px ${JP_FONT}`;
+    g.fillText(text, w / 2, sub ? h * 0.42 : h / 2);
+    if (sub) {
+      g.font = `600 ${Math.round(size * 0.32)}px sans-serif`;
+      g.globalAlpha = 0.75;
+      g.fillText(sub, w / 2, h * 0.8);
+      g.globalAlpha = 1;
+    }
+  });
+}
+
+// An emoji drawn onto a transparent texture: products on the shelves.
+const emojiCache = new Map();
+export function emojiTex(emoji) {
+  if (!emojiCache.has(emoji)) {
+    emojiCache.set(emoji, tex(128, 128, (g) => {
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.font = "100px 'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif";
+      g.fillText(emoji, 64, 70);
+    }));
+  }
+  return emojiCache.get(emoji);
+}
+
+export function floorTex() {
+  return tex(256, 256, (g, w, h) => {
+    g.fillStyle = '#eef0f2';
+    g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#d3d7dc';
+    g.lineWidth = 3;
+    for (let i = 0; i <= w; i += 64) {
+      g.beginPath(); g.moveTo(i, 0); g.lineTo(i, h); g.stroke();
+      g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke();
+    }
+  }, { repeat: [6, 5] });
+}
+
+// Glass fridge door full of bottles.
+export function fridgeTex(seed) {
+  return tex(256, 512, (g, w, h) => {
+    const r = rng(seed);
+    g.fillStyle = '#e9f4ff';
+    g.fillRect(0, 0, w, h);
+    const cols = ['#2ec4b6', '#e71d36', '#ff9f1c', '#3a86ff', '#8ac926', '#f15bb5', '#ffffff', '#6d597a'];
+    for (let row = 0; row < 5; row++) {
+      const y = 30 + row * 96;
+      g.fillStyle = '#b8c6d3';
+      g.fillRect(0, y + 80, w, 5);
+      for (let x = 10; x < w - 24; x += 30) {
+        const c = cols[Math.floor(r() * cols.length)];
+        g.fillStyle = c;
+        g.fillRect(x, y + 18, 22, 62);
+        g.fillRect(x + 7, y + 6, 8, 14);
+        g.fillStyle = 'rgba(255,255,255,0.45)';
+        g.fillRect(x + 3, y + 24, 4, 50);
+      }
+    }
+    g.strokeStyle = '#8c9aa8';
+    g.lineWidth = 8;
+    g.strokeRect(4, 4, w - 8, h - 8);
+  });
+}
+
+// The rainy night street seen through the shop windows: bokeh + streaks.
+export function nightWindowTex() {
+  return tex(1024, 512, (g, w, h) => {
+    const r = rng(77);
+    const grd = g.createLinearGradient(0, 0, 0, h);
+    grd.addColorStop(0, '#0b1438');
+    grd.addColorStop(1, '#1d2a5c');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 40; i++) {
+      const x = r() * w, y = h * 0.35 + r() * h * 0.5, rad = 10 + r() * 30;
+      const c = r() < 0.5 ? '255,200,120' : '150,190,255';
+      const b = g.createRadialGradient(x, y, 0, x, y, rad);
+      b.addColorStop(0, `rgba(${c},0.55)`);
+      b.addColorStop(1, `rgba(${c},0)`);
+      g.fillStyle = b;
+      g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+    }
+    g.strokeStyle = 'rgba(200,220,255,0.25)';
+    g.lineWidth = 1.5;
+    for (let i = 0; i < 160; i++) {
+      const x = r() * w, y = r() * h;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x - 3, y + 18 + r() * 20); g.stroke();
+    }
+  });
+}
+
+export function ceilingLightTex() {
+  return tex(64, 256, (g, w, h) => {
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#dde3ea';
+    g.lineWidth = 4;
+    g.strokeRect(2, 2, w - 4, h - 4);
+  });
+}

@@ -31,7 +31,7 @@ export const COUNTERS = {
   satsu: { kanji: '冊', name: 'satsu', rule: 'books and magazines', read: ['いっさつ', 'にさつ', 'さんさつ', 'よんさつ'], rom: ['issatsu', 'nisatsu', 'sansatsu', 'yonsatsu'] },
   hiki:  { kanji: '匹', name: 'hiki',  rule: 'small animals: cats, dogs, fish', read: ['いっぴき', 'にひき', 'さんびき', 'よんひき'], rom: ['ippiki', 'nihiki', 'sanbiki', 'yonhiki'] },
 };
-const counted = (c, q) => ({ jp: `${K[q]}${COUNTERS[c].kanji}`, kana: COUNTERS[c].read[q - 1], romaji: COUNTERS[c].rom[q - 1] });
+export const counted = (c, q) => ({ jp: `${K[q]}${COUNTERS[c].kanji}`, kana: COUNTERS[c].read[q - 1], romaji: COUNTERS[c].rom[q - 1] });
 
 // ── Items ─────────────────────────────────────────────────────────────────
 export const ITEMS = {
@@ -265,6 +265,16 @@ function night() {
   });
 }
 
+// Mum's shopping list for the 3D shop: 3 different things, read with counters.
+const SHOPPABLE = ['onigiri', 'tea', 'coffee', 'senbei', 'choco', 'melonpan', 'cupnoodle', 'icecream', 'dango', 'bento', 'mask', 'manga', 'magazine'];
+export function shoppingList() {
+  return shuffle(SHOPPABLE).slice(0, 3).map((item) => {
+    const it = ITEMS[item];
+    const q = Math.min(1 + Math.floor(Math.random() * 3), it.max ?? 3);
+    return { item, q, text: `${it.jp} ${counted(it.counter, q).jp}`, reading: `${it.romaji} ${counted(it.counter, q).romaji}` };
+  });
+}
+
 // ── Scene: a glowing konbini on a rainy street (SVG, viewBox 800×400) ──────
 function shelves(x0, y0, w, rows, seed) {
   let s = seed, out = '';
@@ -368,6 +378,7 @@ export const JAPAN = {
   items: ITEMS,
   music: 'jp',
   world: true,
+  shoppingList, counted, yen, counters: COUNTERS,
   snacks: Object.values(ITEMS).filter((i) => i.fav).map((i) => ({ emoji: i.emoji, native: i.jp, en: i.en })),
   scene, night, catSvg,
   intro: {

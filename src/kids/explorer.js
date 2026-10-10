@@ -42,6 +42,7 @@ export class Explorer {
         if (shop === 'jp') { this.award('konbini'); if (stars === 3) this.award('konbini3'); }
       },
       onWords: (shop) => { if (shop === 'jp') this.award('streetwords'); },
+      onShopped: (shop, r) => { if (r.stars >= 2) this.award('shopper'); if (r.exact) this.award('pittari'); },
       onOpen: () => this.cosmos.pause(),
       onClose: () => this.cosmos.resume(),
     });
