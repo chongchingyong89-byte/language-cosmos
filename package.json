@@ -1,0 +1,10 @@
+{
+  "name": "language-cosmos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "3D universe of languages and their linkage to attitude, creativity, conservatism and personality.",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs"
+  }
+}

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Language Cosmos</title>
+  <meta name="description" content="A 3D universe of languages and how each one may shape attitude, creativity, conservatism and personality.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="scene"></div>
+  <div id="loading">Igniting the language cosmos…</div>
+
+  <header id="hud">
+    <h1>语言宇宙 <span>Language Cosmos</span></h1>
+    <p>Languages as stars. Their branches are the ways they may shape the mind.</p>
+  </header>
+
+  <aside id="list" class="glass">
+    <div class="list-tools">
+      <input id="search" type="search" placeholder="Search language or family  /" autocomplete="off">
+      <select id="sort" title="Sort by">
+        <option value="lexicon">Vocabulary</option>
+        <option value="speakers">Speakers</option>
+        <option value="branches">Leaves</option>
+        <option value="name">Name</option>
+      </select>
+    </div>
+    <ul id="lang-list"></ul>
+  </aside>
+
+  <aside id="panel" class="glass"></aside>
+
+  <footer id="legend" class="glass">
+    <div id="cat-filter" class="chips"></div>
+    <div class="controls">
+      <label>Core size
+        <select id="size-mode">
+          <option value="lexicon">Vocabulary</option>
+          <option value="speakers">Speakers</option>
+        </select>
+      </label>
+      <label>Evidence <select id="ev-filter"></select></label>
+      <label class="tog"><input id="toggle-trees" type="checkbox" checked> All trees</label>
+      <label class="tog"><input id="toggle-bridges" type="checkbox" checked> Bridges</label>
+      <label class="tog"><input id="toggle-rotate" type="checkbox" checked> Drift</label>
+      <button id="btn-overview">Overview</button>
+      <button id="btn-export" title="Download your study notes as JSON">Export notes</button>
+    </div>
+  </footer>
+
+  <div id="tooltip" hidden></div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
