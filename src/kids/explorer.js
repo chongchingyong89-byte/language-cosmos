@@ -2,6 +2,7 @@
 import { FAMILIES, STAGES } from '../data/taxonomy.js';
 import { GREETINGS, POWERS, SURE, TOUR, QUIZ, BADGES } from './data.js';
 import { Games } from './games.js';
+import { VOICES } from './voices.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -109,7 +110,8 @@ export class Explorer {
         ${g.text ? `<div class="kid-greet">${esc(g.text)}</div>${g.roman ? `<div class="kid-roman">${esc(g.roman)}</div>` : ''}` : ''}
         ${g.sign ? `<div class="kid-greet">👋</div><p class="kid-sign">${esc(g.sign)}</p>` : ''}
         ${g.note ? `<div class="kid-greet">🌿</div><p class="kid-sign">${esc(g.note)}</p>` : ''}
-        ${g.speak ? '<button class="kid-btn" data-speak>🔊 Say hello</button>' : ''}
+        ${g.speak || VOICES[id] ? '<button class="kid-btn" data-speak>🔊 Say hello</button>' : ''}
+        ${VOICES[id] ? `<div class="voice-credit">🎙️ Real voice: ${esc(VOICES[id].by)} · <a href="${VOICES[id].page}" target="_blank" rel="noopener">${esc(VOICES[id].license)}, Wikimedia Commons</a></div>` : ''}
         <h2>${esc(l.name)}</h2>
         <div class="muted">${esc(l.native !== l.name ? `${l.native} · ` : '')}${esc(fam?.label)} family</div>
         <div class="stamp ${isNew ? 'new' : ''}">🛂 ${isNew ? 'New stamp!' : 'Stamped'}</div>
@@ -204,12 +206,31 @@ export class Explorer {
     });
   }
 
+  // A native speaker's recording first: it works on every device. The
+  // device's own text-to-speech voice is only the fallback.
   async speak(id) {
-    const g = GREETINGS[id];
-    const synth = window.speechSynthesis;
-    if (!g?.speak || !synth) return this.toast('🔇 This browser can\'t speak. Try reading it out loud!');
     const btn = $('#panel-body [data-speak]');
     btn?.classList.add('speaking');
+    const rec = VOICES[id];
+    if (rec) {
+      try {
+        this.audio?.pause();
+        const a = (this.audio = new Audio(rec.src));
+        a.onended = () => btn?.classList.remove('speaking');
+        await a.play();
+        return;
+      } catch { /* blocked or offline: try the device voice */ }
+    }
+    return this.#speakTts(id, btn);
+  }
+
+  async #speakTts(id, btn) {
+    const g = GREETINGS[id];
+    const synth = window.speechSynthesis;
+    if (!g?.speak || !synth) {
+      btn?.classList.remove('speaking');
+      return this.toast('🔇 This browser can\'t speak. Try reading it out loud!');
+    }
 
     const voices = await this.#voices();
     const ALIAS = { he: ['iw'], id: ['in'], 'zh-hk': ['yue-hk', 'yue', 'zh-yue'] };
@@ -321,7 +342,7 @@ export class Explorer {
         <h2>${esc(s.title)}</h2>
         <p>${esc(s.text)}</p>
         ${s.game ? `<button class="kid-btn ghost wide" data-game="${s.game}">🎮 Try it: ${{ tone: 'Tone Detective', number: 'Number Ninja', blue: 'Blue Spotter' }[s.game]}</button>` : ''}
-        ${s.to !== 'overview' && s.to !== 'origin' && GREETINGS[s.to]?.speak ? `<button class="kid-btn ghost wide" data-speak>🔊 Hear "${esc(GREETINGS[s.to].text)}"</button>` : ''}
+        ${s.to !== 'overview' && s.to !== 'origin' && (GREETINGS[s.to]?.speak || VOICES[s.to]) ? `<button class="kid-btn ghost wide" data-speak>🔊 Hear "${esc(GREETINGS[s.to].text)}"</button>` : ''}
         <div class="tour-nav">
           <button class="kid-btn ghost" data-prev ${i === 0 ? 'disabled' : ''}>← Back</button>
           <button class="kid-btn" data-next>${last ? 'Take the quiz 🎓' : 'Next →'}</button>

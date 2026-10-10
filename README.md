@@ -78,6 +78,10 @@ docs/RESEARCH_FRAMEWORK.md   brainstorm, hypotheses, study designs, roadmap
 
 `main.js` logs a console warning for unknown feature ids or bridge endpoints.
 
+## Voice recordings
+
+"Say hello" plays real native-speaker recordings from **Wikimedia Commons** (Wiktionary and Lingua Libre contributors) for 19 languages, streamed from upload.wikimedia.org. Each recording's speaker and licence (public domain, CC0, CC BY, CC BY-SA or GFDL) is credited under the button and listed in [src/kids/voices.js](src/kids/voices.js). Languages without a recording (Turkish, Thai, Vietnamese, Malay, Yoruba) fall back to the device's text-to-speech voice.
+
 ## Caveats that the visual can hide
 
 1. **Vocabulary size is not comparable across languages.** Dictionaries differ in scope, and agglutinative or compounding languages (Finnish, Turkish, German) have effectively unbounded word forms. Core size shows how much is *documented*, not how expressive a language is.

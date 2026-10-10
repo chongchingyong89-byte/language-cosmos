@@ -16,7 +16,7 @@ export const GREETINGS = {
   ru:  { text: 'Привет!', roman: 'Privet', speak: 'ru-RU' },
   hi:  { text: 'नमस्ते!', roman: 'Namaste', speak: 'hi-IN' },
   ta:  { text: 'வணக்கம்!', roman: 'Vanakkam', speak: 'ta-IN' },
-  ar:  { text: 'مرحبا!', roman: 'Marhaba', speak: 'ar-SA' },
+  ar:  { text: 'السلام عليكم', roman: 'As-salāmu ʿalaykum, "peace be upon you"', speak: 'ar-SA' },
   he:  { text: 'שלום!', roman: 'Shalom', speak: 'he-IL' },
   tr:  { text: 'Merhaba!', speak: 'tr-TR' },
   fi:  { text: 'Hei!', speak: 'fi-FI' },
