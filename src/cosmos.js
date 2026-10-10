@@ -678,6 +678,14 @@ export class Cosmos {
 
   setAutoRotate(on) { this.controls.autoRotate = on; }
 
+  // Stop rendering while a full-screen game covers the galaxy.
+  pause() { this.renderer.setAnimationLoop(null); }
+
+  resume() {
+    this.clock.getDelta();
+    this.renderer.setAnimationLoop(() => this.#frame());
+  }
+
   setLeafLabeler(fn) {
     this.leafLabeler = fn;
     for (const n of this.nodes.values()) {

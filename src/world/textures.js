@@ -1,0 +1,262 @@
+// Canvas-drawn textures for the street: signs, shop windows, vending
+// machine, road paint. No image files, so everything stays light.
+import * as THREE from 'three';
+
+export const JP_FONT = "'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic','Meiryo','Noto Sans JP','Noto Sans CJK JP',sans-serif";
+
+function tex(w, h, draw, { repeat } = {}) {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+  return t;
+}
+
+function rng(seed) {
+  return () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+}
+
+const PRODUCT = ['#f25c54', '#f7b267', '#4ea8de', '#80ed99', '#ffd166', '#c77dff', '#ff8fab', '#ffffff', '#2ec4b6', '#e71d36'];
+
+// Lit shop window: shelves of products, posters, a bright interior.
+export function shopWindowTex(seed, { posters = [] } = {}) {
+  return tex(1024, 512, (g, w, h) => {
+    const r = rng(seed);
+    const grd = g.createLinearGradient(0, 0, 0, h);
+    grd.addColorStop(0, '#fffdf2');
+    grd.addColorStop(1, '#f3efe2');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, w, h);
+    for (let row = 0; row < 6; row++) {
+      const y = 70 + row * 72;
+      g.fillStyle = '#c9d3dc';
+      g.fillRect(0, y + 54, w, 6);
+      for (let x = 6; x < w - 10;) {
+        const bw = 12 + r() * 18, bh = 22 + r() * 30;
+        g.fillStyle = PRODUCT[Math.floor(r() * PRODUCT.length)];
+        g.fillRect(x, y + 54 - bh, bw, bh);
+        g.fillStyle = 'rgba(255,255,255,0.35)';
+        g.fillRect(x + 2, y + 56 - bh, 3, bh - 6);
+        x += bw + 3;
+      }
+    }
+    for (const p of posters) {
+      g.fillStyle = p.bg;
+      g.fillRect(p.x, p.y, p.w, p.h);
+      g.fillStyle = p.fg;
+      g.font = `bold ${p.size}px ${JP_FONT}`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(p.text, p.x + p.w / 2, p.y + p.h / 2);
+    }
+    // window frames
+    g.strokeStyle = '#8796a5';
+    g.lineWidth = 10;
+    for (let x = 0; x <= w; x += w / 4) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
+  });
+}
+
+export function shopSignTex() {
+  return tex(1024, 160, (g, w, h) => {
+    g.fillStyle = '#fbfdff';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#22a387';
+    g.fillRect(0, 0, w, 18);
+    g.fillStyle = '#f39a1e';
+    g.fillRect(0, h - 14, w, 14);
+    g.fillStyle = '#2e9e6e';
+    g.beginPath(); g.arc(250, 82, 40, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#fff';
+    g.beginPath(); g.moveTo(222, 88); g.quadraticCurveTo(250, 40, 278, 88); g.closePath(); g.fill();
+    g.fillRect(247, 82, 6, 30);
+    g.fillStyle = '#2e9e6e';
+    g.font = `bold 84px ${JP_FONT}`;
+    g.textBaseline = 'middle';
+    g.fillText('あまやどり', 310, 82);
+    g.font = '18px sans-serif';
+    g.fillStyle = '#6aa58a';
+    g.fillText('A M A Y A D O R I', 318, 132);
+    g.fillStyle = '#f39a1e';
+    g.fillRect(840, 34, 120, 92);
+    g.fillStyle = '#fff';
+    g.font = 'bold 64px sans-serif';
+    g.textAlign = 'center';
+    g.fillText('24', 900, 84);
+    g.font = 'bold 16px sans-serif';
+    g.fillText('HOURS', 900, 116);
+  });
+}
+
+export function doorTex() {
+  return tex(256, 512, (g, w, h) => {
+    g.fillStyle = 'rgba(255,255,255,0.08)';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#1fa58a';
+    g.fillRect(0, 300, w, 40);
+    g.fillStyle = '#fff';
+    g.font = `bold 26px ${JP_FONT}`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText('いらっしゃいませ', w / 2, 320);
+  });
+}
+
+export function vendingTex() {
+  return tex(256, 512, (g, w, h) => {
+    g.fillStyle = '#e8f1ff';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#d2302f';
+    g.fillRect(0, 0, w, 60);
+    g.fillStyle = '#fff';
+    g.font = `bold 28px ${JP_FONT}`;
+    g.textAlign = 'center';
+    g.fillText('つめた〜い', w / 2, 40);
+    const cols = ['#2ec4b6', '#e71d36', '#ff9f1c', '#3a86ff', '#8ac926', '#6d597a', '#f15bb5'];
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 6; c++) {
+        const x = 14 + c * 38, y = 80 + r * 78;
+        g.fillStyle = cols[(r * 3 + c) % cols.length];
+        g.fillRect(x, y, 26, 50);
+        g.fillStyle = 'rgba(255,255,255,0.4)';
+        g.fillRect(x + 4, y + 4, 5, 40);
+        g.fillStyle = r < 2 ? '#3a86ff' : '#e63946'; // blue = cold, red = hot
+        g.fillRect(x, y + 56, 26, 8);
+      }
+    }
+    g.fillStyle = '#2b2f3a';
+    g.fillRect(30, 420, 196, 60);
+    g.fillStyle = '#7ee8fa';
+    g.fillRect(150, 432, 60, 20);
+  });
+}
+
+// Road paint: white text on transparent, laid flat on the asphalt.
+export function roadTextTex(text) {
+  return tex(512, 256, (g, w, h) => {
+    g.fillStyle = 'rgba(245,245,245,0.92)';
+    g.font = `bold 200px ${JP_FONT}`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.save();
+    g.scale(1, 1.25); // painted road text is stretched for drivers
+    g.fillText(text, w / 2, h / 2 / 1.25);
+    g.restore();
+  });
+}
+
+// Japan's stop sign: an upside-down red triangle.
+export function stopSignTex() {
+  return tex(256, 256, (g) => {
+    g.fillStyle = '#ffffff';
+    g.beginPath(); g.moveTo(8, 20); g.lineTo(248, 20); g.lineTo(128, 236); g.closePath(); g.fill();
+    g.fillStyle = '#d7192e';
+    g.beginPath(); g.moveTo(26, 30); g.lineTo(230, 30); g.lineTo(128, 216); g.closePath(); g.fill();
+    g.fillStyle = '#fff';
+    g.font = `bold 52px ${JP_FONT}`;
+    g.textAlign = 'center';
+    g.fillText('止まれ', 128, 98);
+  });
+}
+
+export function crossingSignTex() {
+  return tex(256, 256, (g) => {
+    g.fillStyle = '#1f5fbf';
+    g.fillRect(8, 8, 240, 240);
+    g.fillStyle = '#fff';
+    g.beginPath(); g.moveTo(128, 30); g.lineTo(230, 210); g.lineTo(26, 210); g.closePath(); g.fill();
+    g.fillStyle = '#111';
+    g.beginPath(); g.arc(128, 92, 13, 0, Math.PI * 2); g.fill();
+    g.lineWidth = 12; g.strokeStyle = '#111'; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(128, 110); g.lineTo(122, 150); g.lineTo(104, 186); g.moveTo(122, 150); g.lineTo(146, 184); g.moveTo(102, 130); g.lineTo(150, 128); g.stroke();
+    g.fillStyle = '#fff';
+    g.fillRect(40, 214, 176, 6);
+  });
+}
+
+export function norenTex() {
+  return tex(256, 256, (g, w, h) => {
+    g.fillStyle = '#1f3c88';
+    g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#162c66';
+    g.lineWidth = 6;
+    for (let x = w / 3; x < w; x += w / 3) { g.beginPath(); g.moveTo(x, 60); g.lineTo(x, h); g.stroke(); }
+    g.fillStyle = '#fff';
+    g.font = `bold 64px ${JP_FONT}`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText('とりや', w / 2, h / 2);
+  });
+}
+
+export function lanternTex() {
+  return tex(128, 256, (g, w, h) => {
+    const grd = g.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, 120);
+    grd.addColorStop(0, '#ffd27a');
+    grd.addColorStop(1, '#e2502f');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#2b0f08';
+    g.font = `bold 56px ${JP_FONT}`;
+    g.textAlign = 'center';
+    g.fillText('焼', w / 2, 110);
+    g.fillText('鳥', w / 2, 180);
+  });
+}
+
+export function apartmentTex(seed) {
+  return tex(512, 512, (g, w, h) => {
+    const r = rng(seed);
+    g.fillStyle = '#2a3048';
+    g.fillRect(0, 0, w, h);
+    for (let y = 30; y < h; y += 90) {
+      for (let x = 30; x < w - 60; x += 110) {
+        const lit = r() < 0.45;
+        g.fillStyle = lit ? (r() < 0.5 ? '#ffe2a8' : '#cfe3ff') : '#161b2e';
+        g.fillRect(x, y, 70, 50);
+        g.fillStyle = '#3b4262';
+        g.fillRect(x - 6, y + 52, 82, 6);
+      }
+    }
+  });
+}
+
+export function tactileTex() {
+  return tex(64, 64, (g, w, h) => {
+    g.fillStyle = '#e8c33a';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#c9a521';
+    for (let y = 8; y < h; y += 16) for (let x = 8; x < w; x += 16) { g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill(); }
+  }, { repeat: [1, 8] });
+}
+
+export function sidewalkTex() {
+  return tex(128, 128, (g, w, h) => {
+    g.fillStyle = '#4a5068';
+    g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#3a3f55';
+    g.lineWidth = 3;
+    for (let i = 0; i <= w; i += 32) {
+      g.beginPath(); g.moveTo(i, 0); g.lineTo(i, h); g.stroke();
+      g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke();
+    }
+  }, { repeat: [24, 3] });
+}
+
+// Patchy wet asphalt: dark with lighter dry/rough spots; drawn over the mirror.
+export function asphaltTex() {
+  return tex(512, 512, (g, w, h) => {
+    const r = rng(11);
+    g.fillStyle = 'rgba(16, 20, 38, 0.55)';
+    g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 900; i++) {
+      g.fillStyle = `rgba(30, 36, 60, ${0.15 + r() * 0.35})`;
+      g.beginPath();
+      g.arc(r() * w, r() * h, 2 + r() * 18, 0, Math.PI * 2);
+      g.fill();
+    }
+  }, { repeat: [6, 2] });
+}

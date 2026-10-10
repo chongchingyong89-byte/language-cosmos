@@ -21,6 +21,22 @@ A 3D universe for studying how each language may shape attitude, creativity, con
 
 First-time visitors choose a mode on the welcome screen; the ⇄ pill switches anytime.
 
+## 🏪 World Shops
+
+Learn a language, its everyday attitudes and its favourite snacks at a shop counter. Phase 1 is open: **🇯🇵 あまやどり**, a rainy night in Tokyo.
+
+- **The street (3D):** walk an anime heroine with a clear umbrella through a wet, reflective street (WASD/arrows, or a joystick on phones). Find 13 Japanese words on signs, shops and the road (止まれ, 横断歩道, 自動販売機, 点字ブロック…), each with a reading, meaning and culture note.
+- **The counter:** step through the konbini door to serve customers with different attitudes (hurried, indirect, very polite…). Learn counter words (本・個・枚・冊・匹), polite shop phrases, prices in Japanese, katakana and the indirect "大丈夫です" (no thanks).
+- Generated koto lo-fi music in the Japanese *in* scale, rain, door chime and footsteps.
+- Coming phases: Malaysia, China, Korea, Thailand, India, France, Mexico.
+
+Direct links: `#shop` (all shops), `#shop-jp` (the street), `#shop-jp/play` (straight to the counter).
+
+## Credits
+
+- Heroine: **VRM1_Constraint_Twist_Sample** © 2022 pixiv Inc., [VRM Public License 1.0](https://vrm.dev/licenses/1.0/) (avatar use by everyone, redistribution and modification allowed). Loaded with [three-vrm](https://github.com/pixiv/three-vrm) (MIT).
+- Voice recordings: Wikimedia Commons contributors (see below).
+
 ## Run
 
 ```bash
@@ -48,7 +64,10 @@ src/
   ui.js                 list, detail panel, legend filters, tooltip, study notes
   audio.js              procedural soundscape: ambient pad, wind, twinkles, interaction cues
   profile.js            builds each language's hypothesised personality tilt from its leaves
-  kids/                 Explorer mode: data.js (greetings, powers, tour, quiz, badges), explorer.js, games.js
+  kids/                 Explorer mode: data.js (greetings, powers, tour, quiz, badges), explorer.js, games.js, voices.js
+  shops/                World Shops: engine.js (counter game), japan.js (shop data), registry.js, chibi.js, rain.js
+  world/                3D street: street.js (scene, controls, word hunt), heroineVrm.js (anime avatar), heroine.js (fallback), textures.js
+assets/heroine.vrm      the anime heroine (pixiv VRM sample)
   data/
     taxonomy.js         8 trait domains, 5 evidence levels, families, galaxy order
     features.js         linguistic features → claimed effects (+ refs, how to test), bilingual bridges

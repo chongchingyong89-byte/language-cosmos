@@ -367,6 +367,7 @@ export const JAPAN = {
   staffSays: L.thanks,
   items: ITEMS,
   music: 'jp',
+  world: true,
   snacks: Object.values(ITEMS).filter((i) => i.fav).map((i) => ({ emoji: i.emoji, native: i.jp, en: i.en })),
   scene, night, catSvg,
   intro: {

@@ -116,5 +116,6 @@ export const BADGES = [
   { id: 'number',   emoji: '🔢', name: 'Number Ninja',       desc: 'Won Number Ninja' },
   { id: 'blue',     emoji: '🔵', name: 'Blue Spotter',       desc: 'Finished Blue Spotter' },
   { id: 'konbini',  emoji: '🏪', name: 'Konbini Clerk',      desc: 'Finished a night shift in Japan' },
+  { id: 'streetwords', emoji: '📖', name: 'Street Reader',   desc: 'Found every word on the rainy Tokyo street' },
   { id: 'konbini3', emoji: '🌟', name: 'Star Clerk',         desc: 'Got ★★★ on a konbini night shift' },
 ];

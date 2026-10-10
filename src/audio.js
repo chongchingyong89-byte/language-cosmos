@@ -206,6 +206,26 @@ export class SoundScape {
     this.#bell(mtof(91), { gain: 0.06, decay: 0.9, bright: 0.8, when: 0.08 });
   }
 
+  // Wet footstep: a short, soft splash.
+  step() {
+    if (!this.#ready()) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    src.playbackRate.value = 0.8 + Math.random() * 0.4;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 900 + Math.random() * 700;
+    f.Q.value = 0.9;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.045, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+    src.connect(f).connect(g).connect(this.fxBus);
+    src.start(t, Math.random() * 2);
+    src.stop(t + 0.16);
+  }
+
   thunder() {
     if (!this.#ready()) return;
     const ctx = this.ctx, t = ctx.currentTime + 0.1;

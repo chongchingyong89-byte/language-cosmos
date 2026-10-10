@@ -41,6 +41,9 @@ export class Explorer {
       onFinish: (shop, stars) => {
         if (shop === 'jp') { this.award('konbini'); if (stars === 3) this.award('konbini3'); }
       },
+      onWords: (shop) => { if (shop === 'jp') this.award('streetwords'); },
+      onOpen: () => this.cosmos.pause(),
+      onClose: () => this.cosmos.resume(),
     });
 
     $('#mode-toggle').addEventListener('click', () => this.setMode(this.active ? 'research' : 'kids'));
