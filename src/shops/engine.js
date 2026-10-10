@@ -135,7 +135,6 @@ export class ShopGame {
   // ── A night at the counter ───────────────────────────────────────────────
   async startNight() {
     const shop = this.shop;
-    this.sound.stopRecording();
     const run = (this.run = { customers: shop.night(), stars: 0, total: 0, yen: 0, learned: new Map(), attitudes: new Map(), happy: 0, mood: 3 });
     this.#show(`
       <div class="shop-stage">${shop.scene()}<canvas class="shop-rain"></canvas>
@@ -144,12 +143,13 @@ export class ShopGame {
           <span class="hud-pill hud-clock">🕙 22:00</span>
           <span class="hud-pill hud-weather"></span>
           <span class="hud-pill">⭐ <b class="hud-stars">0</b></span>
-          <span class="hud-pill">💴 <b class="hud-yen">¥0</b></span>
+          <span class="hud-pill">💴 <b class="hud-yen">${this.#money(0)}</b></span>
         </div>
       </div>
-      <div class="shop-counter"><div class="counter-body"></div></div>`);
+      <div class="shop-counter"><div class="counter-body"></div></div>
+      <div class="music-chip night-chip"></div>`);
     this.#startRain(0.2);
-    this.sound.shopMusic(shop.music);
+    this.#music('shop');
     for (let i = 0; i < run.customers.length; i++) {
       if (this.run !== run) return;
       await this.#serve(run, run.customers[i], i);
@@ -157,12 +157,16 @@ export class ShopGame {
     if (this.run === run) this.#results(run);
   }
 
+  #money(n) {
+    return this.shop?.currency ? this.shop.currency(n) : `¥${n.toLocaleString('en')}`;
+  }
+
   #hud(run, i, weather) {
     const h = 22 + Math.floor((i * 40) / 60), m = (i * 40) % 60;
     $('.hud-clock', this.root).textContent = `🕙 ${String(h % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     $('.hud-weather', this.root).innerHTML = `☔ <b>${weather.word}</b> <small>${esc(weather.en)}</small>`;
     $('.hud-stars', this.root).textContent = run.stars;
-    $('.hud-yen', this.root).textContent = `¥${run.yen.toLocaleString('en')}`;
+    $('.hud-yen', this.root).textContent = this.#money(run.yen);
   }
 
   async #serve(run, c, i) {
@@ -657,7 +661,7 @@ export class ShopGame {
         <button class="shop-x" data-close aria-label="Close">✕</button>
         <div class="big-stars">${'★'.repeat(rating)}${'☆'.repeat(3 - rating)}</div>
         <h2>The rain stops. Night shift done!</h2>
-        <p>${run.stars} of ${run.total} right · ${run.happy} of ${run.customers.length} customers left happy 😊 · ¥${run.yen.toLocaleString('en')} in the till</p>
+        <p>${run.stars} of ${run.total} right · ${run.happy} of ${run.customers.length} customers left happy 😊 · ${this.#money(run.yen)} in the till</p>
         <h3>Attitudes you met tonight</h3>
         <div class="attitudes">${[...run.attitudes.entries()].map(([who, a]) => `<div><span>${a.emoji}</span><div><b>${esc(who)}: ${esc(a.label)}</b><small>${esc(a.note)}</small></div></div>`).join('')}</div>
         <p class="muted small">These are common shop habits, not rules: every person is different.</p>

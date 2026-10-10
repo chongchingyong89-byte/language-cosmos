@@ -894,3 +894,5 @@ body:not(.lens-on) .core-label .lens { display: none; }
 .music-chip a { color: #cfd8ff; }
 .music-chip button { margin-left: 4px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: #fff; border-radius: 8px; cursor: pointer; padding: 0 6px; }
 @media (max-width: 980px), (max-height: 520px) { .music-chip { left: 12px; right: auto; bottom: auto; top: calc(var(--safe-t) + 84px); max-width: 60vw; } .world.interior .music-chip { top: auto; bottom: calc(var(--safe-b) + 14px); left: auto; right: 12px; } }
+
+.shop-frame > .music-chip.night-chip { position: fixed; right: 12px; bottom: calc(var(--safe-b) + 12px); top: auto; left: auto; }

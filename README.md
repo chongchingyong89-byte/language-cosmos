@@ -30,7 +30,8 @@ Learn a language, its everyday attitudes and its favourite snacks at a shop coun
 - **The till:** the clerk asks 温めますか？, 袋はご利用ですか？ and ポイントカードは？. Answer in Japanese (say 大丈夫です for "no thanks"), hear the price (八百六十円です), pay with yen coins and notes, and get お返し (change), or ぴったり for the exact amount. Your basket is then checked against the list.
 - **The night shift:** switch roles and serve customers with different attitudes (hurried, indirect, very polite…): counter words, polite shop phrases, prices, katakana.
 - Generated koto lo-fi music in the Japanese *in* scale, rain, door chime and footsteps.
-- Coming phases: Malaysia, China, Korea, Thailand, India, France, Mexico.
+- **🇲🇾 Phase 2 · Kedai Runcit Budi:** an evening shift at a Malaysian shophouse mamak. Penjodoh bilangan (sebiji kuih, sekeping roti canai, secawan teh tarik, sekaki payung, seekor kucing), calling customers Pak cik / Mak cik / Kak / Adik, prices in ringgit and sen, Manglish "Can lah!" and "tapau", "Makan sini atau bungkus?", "Tak apa", and reduplication (renyai-renyai). Keroncong and gambus recordings play in the background.
+- Coming phases: China, Korea, Thailand, India, France, Mexico.
 
 Direct links: `#shop` (all shops), `#shop-jp` (the street), `#shop-jp/inside` (the 3D shop), `#shop-jp/play` (the night shift).
 

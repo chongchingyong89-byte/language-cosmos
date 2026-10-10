@@ -13,6 +13,13 @@ const rand = (a, b) => a + Math.random() * (b - a);
 // issues). jp: koto-like plucks in the Japanese "in" scale (D Eb G A Bb, the
 // scale of Sakura Sakura) over soft lo-fi chords.
 const SHOP_MUSIC = {
+  // my: gentle plucks in a major pentatonic over simple I–IV–V chords,
+  // a nod to keroncong and dondang sayang.
+  my: {
+    bpm: 84, gain: 0.45, density: 0.5,
+    melody: [60, 62, 64, 67, 69, 72, 74, 76, 79, 81],
+    chords: [[36, 48, 52, 55, 60], [41, 53, 57, 60, 65], [43, 55, 59, 62, 67], [36, 48, 52, 55, 64]],
+  },
   jp: {
     bpm: 66, gain: 0.5, density: 0.42,
     melody: [62, 63, 67, 69, 70, 74, 75, 79, 81, 82],

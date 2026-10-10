@@ -5,6 +5,7 @@ import { Games } from './games.js';
 import { VOICES } from './voices.js';
 import { ShopGame } from '../shops/engine.js';
 import { JAPAN } from '../shops/japan.js';
+import { MALAYSIA } from '../shops/malaysia.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -40,6 +41,7 @@ export class Explorer {
     this.shops = new ShopGame(this.sound, {
       onFinish: (shop, stars) => {
         if (shop === 'jp') { this.award('konbini'); if (stars === 3) this.award('konbini3'); }
+        if (shop === 'my') this.award('mamak');
       },
       onWords: (shop) => { if (shop === 'jp') this.award('streetwords'); },
       onShopped: (shop, r) => { if (r.stars >= 2) this.award('shopper'); if (r.exact) this.award('pittari'); },
@@ -133,6 +135,7 @@ export class Explorer {
         <div><b>${l.lexicon.n.toLocaleString('en')}</b><span>words in its big dictionary</span></div>
       </div>
       ${id === 'ja' ? '<button class="kid-btn wide shop-btn" data-konbini>🏪 Work a night shift at a Japanese konbini</button>' : ''}
+      ${id === 'ms' ? '<button class="kid-btn wide shop-btn" data-mamak>🧋 Work an evening shift at a Malaysian mamak</button>' : ''}
       <h3>Brain superpowers</h3>
       ${powers.length ? powers.map((it) => this.#powerCard(it)).join('') : '<p class="muted">Scientists are still discovering this language\'s superpowers!</p>'}
     `, () => this.#wire(id));
@@ -197,6 +200,7 @@ export class Explorer {
     body.querySelector('[data-passport]')?.addEventListener('click', () => this.showPassport());
     body.querySelector('[data-shops]')?.addEventListener('click', () => this.shops.openPicker());
     body.querySelector('[data-konbini]')?.addEventListener('click', () => this.shops.intro(JAPAN));
+    body.querySelector('[data-mamak]')?.addEventListener('click', () => this.shops.introById('my'));
     body.querySelector('[data-speak]')?.addEventListener('click', () => this.speak(langId));
     for (const b of body.querySelectorAll('[data-game]')) b.addEventListener('click', (e) => { e.stopPropagation(); this.games.open(b.dataset.game); });
     for (const card of body.querySelectorAll('.power:not(.big)')) {
